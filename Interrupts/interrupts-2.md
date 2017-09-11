@@ -109,7 +109,7 @@ movl	initial_gs+4(%rip),%edx
 wrmsr
 ```
 
-We already saw this code in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html). First of all pay attention on the last `wrmsr` instruction. This instruction writes data from the `edx:eax` registers to the [model specific register](http://en.wikipedia.org/wiki/Model-specific_register) specified by the `ecx` register. We can see that `ecx` contains `$MSR_GS_BASE` which is declared in the [arch/x86/include/uapi/asm/msr-index.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/uapi/asm/msr-index.h) and looks like:
+我们已经在上一[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html)看了这部分代码。首先注意最后的 `wrmsr` 指令。这个指令将数据从 `edx:eax` 寄存器写入 `ecx` 指定的 [model specific register](http://en.wikipedia.org/wiki/Model-specific_register)。我们可以看到 `ecx` 包含了 `$MSR_GS_BASE`，它定义在 [arch/x86/include/uapi/asm/msr-index.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/uapi/asm/msr-index.h)，如下所示：We already saw this code in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html). First of all pay attention on the last `wrmsr` instruction. This instruction writes data from the `edx:eax` registers to the [model specific register](http://en.wikipedia.org/wiki/Model-specific_register) specified by the `ecx` register. We can see that `ecx` contains `$MSR_GS_BASE` which is declared in the [arch/x86/include/uapi/asm/msr-index.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/uapi/asm/msr-index.h) and looks like:
 
 ```C
 #define MSR_GS_BASE             0xc0000101
