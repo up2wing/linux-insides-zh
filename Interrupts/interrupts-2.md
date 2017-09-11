@@ -115,21 +115,21 @@ wrmsr
 #define MSR_GS_BASE             0xc0000101
 ```
 
-From this we can understand that `MSR_GS_BASE` defines the number of the `model specific register`. Since registers `cs`, `ds`, `es`, and `ss` are not used in the 64-bit mode, their fields are ignored. But we can access memory over `fs` and `gs` registers. The model specific register provides a `back door` to the hidden parts of these segment registers and allows to use 64-bit base address for segment register addressed by the `fs` and `gs`. So the `MSR_GS_BASE` is the hidden part and this part is mapped on the `GS.base` field. Let's look on the `initial_gs`:
+从这儿我们可以理解到，`MSR_GS_BASE` 定义了 `MSR` 寄存器的标号。由于在 64 位模式下不再使用 `cs`, `ds`, `es` 和 `ss` 寄存器，它们的字段会被忽略。但是我们可以通过 `fs` 和 `gs` 寄存器访问内存。`MSR` 寄存器为这些段寄存器的隐藏部分提供了`后门`，并允许使用 64 位基地址来通过 `fs` 和 `gs` 寻址段寄存器。所以 `MSR_GS_BASE` 是隐藏的部分，这部分映射为 `GS.base` 字段。让我们来看下 `initial_gs`：From this we can understand that `MSR_GS_BASE` defines the number of the `model specific register`. Since registers `cs`, `ds`, `es`, and `ss` are not used in the 64-bit mode, their fields are ignored. But we can access memory over `fs` and `gs` registers. The model specific register provides a `back door` to the hidden parts of these segment registers and allows to use 64-bit base address for segment register addressed by the `fs` and `gs`. So the `MSR_GS_BASE` is the hidden part and this part is mapped on the `GS.base` field. Let's look on the `initial_gs`:
 
 ```assembly
 GLOBAL(initial_gs)
 	.quad	INIT_PER_CPU_VAR(irq_stack_union)
 ```
 
-We pass `irq_stack_union` symbol to the `INIT_PER_CPU_VAR` macro which just concatenates the `init_per_cpu__` prefix with the given symbol. In our case we will get the `init_per_cpu__irq_stack_union` symbol. Let's look at the [linker](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/vmlinux.lds.S) script. There we can see following definition:
+我们将 `irq_stack_union` 符号传递给 `INIT_PER_CPU_VAR` 宏，改宏只是将 `init_per_cpu__` 前缀与给定符号连接起来。在我们的例子中，我们得到 `init_per_cpu__irq_stack_union` 符号。让我们来看下[链接器](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/vmlinux.lds.S)脚本。我们可以看到以下定义：We pass `irq_stack_union` symbol to the `INIT_PER_CPU_VAR` macro which just concatenates the `init_per_cpu__` prefix with the given symbol. In our case we will get the `init_per_cpu__irq_stack_union` symbol. Let's look at the [linker](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/vmlinux.lds.S) script. There we can see following definition:
 
 ```
 #define INIT_PER_CPU(x) init_per_cpu__##x = x + __per_cpu_load
 INIT_PER_CPU(irq_stack_union);
 ```
 
-It tells us that the address of the `init_per_cpu__irq_stack_union` will be `irq_stack_union + __per_cpu_load`. Now we need to understand where `init_per_cpu__irq_stack_union` and `__per_cpu_load` are what they mean. The first `irq_stack_union` is defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) with the `DECLARE_INIT_PER_CPU` macro which expands to call the `init_per_cpu_var` macro:
+它告诉我们， `init_per_cpu__irq_stack_union` 将是 `irq_stack_union + __per_cpu_load`。现在我们需要理解 `init_per_cpu__irq_stack_union` 和 `__per_cpu_load` 是什么意思。第一个 `irq_stack_union` 在 [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) 中以 `DECLARE_INIT_PER_CPU` 宏进行定义，后者扩展为 `init_per_cpu_var` 宏：It tells us that the address of the `init_per_cpu__irq_stack_union` will be `irq_stack_union + __per_cpu_load`. Now we need to understand where `init_per_cpu__irq_stack_union` and `__per_cpu_load` are what they mean. The first `irq_stack_union` is defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) with the `DECLARE_INIT_PER_CPU` macro which expands to call the `init_per_cpu_var` macro:
 
 ```C
 DECLARE_INIT_PER_CPU(irq_stack_union);
@@ -140,13 +140,13 @@ DECLARE_INIT_PER_CPU(irq_stack_union);
 #define init_per_cpu_var(var)  init_per_cpu__##var
 ```
 
-If we expand all macros we will get the same `init_per_cpu__irq_stack_union` as we got after expanding the `INIT_PER_CPU` macro, but you can note that it is not just a symbol, but a variable. Let's look at the `typeof(per_cpu_var(var))` expression. Our `var` is `irq_stack_union` and the `per_cpu_var` macro is defined in the [arch/x86/include/asm/percpu.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/percpu.h):
+如果我们扩展所有的宏，我们将得到和扩展 `INIT_PER_CPU` 宏相同的 `init_per_cpu__irq_stack_union`。你可以注意到，它不仅仅是一个符号，还是一个变量。让我们来看下 `typeof(per_cpu_var(var))` 表达式。我们的 `var` 是 `irq_stack_union`，并且 `per_cpu_var` 定义在 [arch/x86/include/asm/percpu.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/percpu.h)：If we expand all macros we will get the same `init_per_cpu__irq_stack_union` as we got after expanding the `INIT_PER_CPU` macro, but you can note that it is not just a symbol, but a variable. Let's look at the `typeof(per_cpu_var(var))` expression. Our `var` is `irq_stack_union` and the `per_cpu_var` macro is defined in the [arch/x86/include/asm/percpu.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/percpu.h):
 
 ```C
 #define PER_CPU_VAR(var)        %__percpu_seg:var
 ```
 
-where:
+其中：where:
 
 ```C
 #ifdef CONFIG_X86_64
