@@ -154,7 +154,7 @@ DECLARE_INIT_PER_CPU(irq_stack_union);
 endif
 ```
 
-So, we are accessing `gs:irq_stack_union` and getting its type which is `irq_union`. Ok, we defined the first variable and know its address, now let's look at the second `__per_cpu_load` symbol. There are a couple of `per-cpu` variables which are located after this symbol. The `__per_cpu_load` is defined in the [include/asm-generic/sections.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/asm-generic-sections.h):
+所以，我们正在访问 `gs:irq_stack_union`，并且获取它的类型为 `irq_union`。好，我们定义了第一个变量并知道了它的地址，心在让我们来看下第二个 `__per_cpu_load` 符号。这个符号后面有几个 `per-cpu` 变量。`__per_cpu_load` 定义在 [include/asm-generic/sections.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/asm-generic-sections.h)：So, we are accessing `gs:irq_stack_union` and getting its type which is `irq_union`. Ok, we defined the first variable and know its address, now let's look at the second `__per_cpu_load` symbol. There are a couple of `per-cpu` variables which are located after this symbol. The `__per_cpu_load` is defined in the [include/asm-generic/sections.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/asm-generic-sections.h):
 
 ```C
 extern char __per_cpu_load[], __per_cpu_start[], __per_cpu_end[];
