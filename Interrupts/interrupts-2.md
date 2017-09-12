@@ -160,7 +160,7 @@ endif
 extern char __per_cpu_load[], __per_cpu_start[], __per_cpu_end[];
 ```
 
-and presented base address of the `per-cpu` variables from the data area. So, we know the address of the `irq_stack_union`, `__per_cpu_load` and we know that `init_per_cpu__irq_stack_union` must be placed right after `__per_cpu_load`. And we can see it in the [System.map](http://en.wikipedia.org/wiki/System.map):
+它还从数据区提供了 `per-cpu` 变量的基地址。因此，我们知道了 `irq_stack_union` 的基地址、`__per_cpu_load`，还知道了 `init_per_cpu__irq_stack_union` 必须放在 `__per_cpu_load` 后面。我们可以在 [System.map](http://en.wikipedia.org/wiki/System.map) 中看到它：and presented base address of the `per-cpu` variables from the data area. So, we know the address of the `irq_stack_union`, `__per_cpu_load` and we know that `init_per_cpu__irq_stack_union` must be placed right after `__per_cpu_load`. And we can see it in the [System.map](http://en.wikipedia.org/wiki/System.map):
 
 ```
 ...
@@ -174,7 +174,7 @@ ffffffff819ed000 A init_per_cpu__irq_stack_union
 ...
 ```
 
-Now we know about `initial_gs`, so let's look at the code:
+现在我们知道了 `initial_gs`，让我们来看看代码：Now we know about `initial_gs`, so let's look at the code:
 
 ```assembly
 movl	$MSR_GS_BASE,%ecx
@@ -183,7 +183,7 @@ movl	initial_gs+4(%rip),%edx
 wrmsr
 ```
 
-Here we specified a model specific register with `MSR_GS_BASE`, put the 64-bit address of the `initial_gs` to the `edx:eax` pair and execute the `wrmsr` instruction for filling the `gs` register with the base address of the `init_per_cpu__irq_stack_union` which will be at the bottom of the interrupt stack. After this we will jump to the C code on the `x86_64_start_kernel` from the [arch/x86/kernel/head64.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/head64.c). In the `x86_64_start_kernel` function we do the last preparations before we jump into the generic and architecture-independent kernel code and one of these preparations is filling the early `Interrupt Descriptor Table` with the interrupts handlers entries or `early_idt_handlers`. You can remember it, if you have read the part about the [Early interrupt and exception handling](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-2.html) and can remember following code:
+这里我们用 `MSR_GS_BASE` 指定了 `MSR` 寄存器，将 `initial_gs` 的 64 位地址写入 `edx:eax` 对，并执行 `wrmsr` 指令，来用 `init_per_cpu__irq_stack_union` 的基地址（这将是中断栈的底部）来填充 `gs` 寄存器。之后，我们将从 [arch/x86/kernel/head64.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/head64.c) 跳到 `x86_64_start_kernel` 中的 C 代码。在 `x86_64_start_kernel` 函数中，我们做进入通用和独立架构的内核代码前最后的准备工作，其中一项就是用中断处理程序条目或 `early_idt_handlers` 填充早期的`中断描述符表`。你可以记住它，如果你已经阅读了关于[早期中断和异常处理](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-2.html)的部分，并且可以记住下面的代码：Here we specified a model specific register with `MSR_GS_BASE`, put the 64-bit address of the `initial_gs` to the `edx:eax` pair and execute the `wrmsr` instruction for filling the `gs` register with the base address of the `init_per_cpu__irq_stack_union` which will be at the bottom of the interrupt stack. After this we will jump to the C code on the `x86_64_start_kernel` from the [arch/x86/kernel/head64.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/head64.c). In the `x86_64_start_kernel` function we do the last preparations before we jump into the generic and architecture-independent kernel code and one of these preparations is filling the early `Interrupt Descriptor Table` with the interrupts handlers entries or `early_idt_handlers`. You can remember it, if you have read the part about the [Early interrupt and exception handling](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-2.html) and can remember following code:
 
 ```C
 for (i = 0; i < NUM_EXCEPTION_VECTORS; i++)
@@ -192,7 +192,7 @@ for (i = 0; i < NUM_EXCEPTION_VECTORS; i++)
 load_idt((const struct desc_ptr *)&idt_descr);
 ```
 
-but I wrote `Early interrupt and exception handling` part when Linux kernel version was - `3.18`. For this day actual version of the Linux kernel is `4.1.0-rc6+` and ` Andy Lutomirski` sent the [patch](https://lkml.org/lkml/2015/6/2/106) and soon it will be in the mainline kernel that changes behaviour for the `early_idt_handlers`. **NOTE** While I wrote this part the [patch](https://github.com/torvalds/linux/commit/425be5679fd292a3c36cb1fe423086708a99f11a) already turned in the Linux kernel source code. Let's look on it. Now the same part looks like:
+但是当我写`早期中断和异常处理`时，Linux 内核版本为 - `3.18`。现在 Linux 内核实际版本是 `4.1.0-rc6+`，并且 ` Andy Lutomirski` 发送了[补丁](https://lkml.org/lkml/2015/6/2/106)，这个补丁修改了 `early_idt_handlers` 的行为，并很快就会进入内核主线。**注意**，当我写本部分时，[补丁](https://github.com/torvalds/linux/commit/425be5679fd292a3c36cb1fe423086708a99f11a)已经进入 Linux 内核源码。让我们来分析下它。现在同一部分看起来像这样：but I wrote `Early interrupt and exception handling` part when Linux kernel version was - `3.18`. For this day actual version of the Linux kernel is `4.1.0-rc6+` and ` Andy Lutomirski` sent the [patch](https://lkml.org/lkml/2015/6/2/106) and soon it will be in the mainline kernel that changes behaviour for the `early_idt_handlers`. **NOTE** While I wrote this part the [patch](https://github.com/torvalds/linux/commit/425be5679fd292a3c36cb1fe423086708a99f11a) already turned in the Linux kernel source code. Let's look on it. Now the same part looks like:
 
 ```C
 for (i = 0; i < NUM_EXCEPTION_VECTORS; i++)
@@ -201,13 +201,13 @@ for (i = 0; i < NUM_EXCEPTION_VECTORS; i++)
 load_idt((const struct desc_ptr *)&idt_descr);
 ```
 
-AS you can see it has only one difference in the name of the array of the interrupts handlers entry points. Now it is `early_idt_handler_arry`:
+正如你看到的一样，中断处理函数入口点数组的名字只有一处区别。现在是 `early_idt_handler_arry`：AS you can see it has only one difference in the name of the array of the interrupts handlers entry points. Now it is `early_idt_handler_arry`:
 
 ```C
 extern const char early_idt_handler_array[NUM_EXCEPTION_VECTORS][EARLY_IDT_HANDLER_SIZE];
 ```
 
-where `NUM_EXCEPTION_VECTORS` and `EARLY_IDT_HANDLER_SIZE` are defined as:
+其中 `NUM_EXCEPTION_VECTORS` 和 `EARLY_IDT_HANDLER_SIZE` 定义为：where `NUM_EXCEPTION_VECTORS` and `EARLY_IDT_HANDLER_SIZE` are defined as:
 
 ```C
 #define NUM_EXCEPTION_VECTORS 32
