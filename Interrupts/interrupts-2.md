@@ -284,12 +284,12 @@ this_cpu_write(irq_stack_union.stack_canary, canary);
 
 更多关于 `this_cpu_*` 操作你可以阅读[Linux 内核文档](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt)。more about `this_cpu_*` operation you can read in the [Linux kernel documentation](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt).
 
-Disabling/Enabling local interrupts
+禁用/启用本地中断Disabling/Enabling local interrupts
 --------------------------------------------------------------------------------
 
-The next step in the [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) which is related to the interrupts and interrupts handling after we have set the `canary` value to the interrupt stack - is the call of the `local_irq_disable` macro.
+在 [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) 中，在将 `canary` 值设置为中断堆栈后，与中断和中断处理相关的下一个步骤，The next step in the [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) which is related to the interrupts and interrupts handling after we have set the `canary` value to the interrupt stack - is the call of the `local_irq_disable` macro.
 
-This macro defined in the [include/linux/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/linux/irqflags.h) header file and as you can understand, we can disable interrupts for the CPU with the call of this macro. Let's look on its implementation. First of all note that it depends on the `CONFIG_TRACE_IRQFLAGS_SUPPORT` kernel configuration option:
+这个宏定义在 [include/linux/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/linux/irqflags.h) 头文件中，并且就像你理解的，我们可以调用这个宏禁用 CPU 的中断。让我们来看下它的实现。首先要注意，它依赖于内核配置项 `CONFIG_TRACE_IRQFLAGS_SUPPORT`：This macro defined in the [include/linux/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/linux/irqflags.h) header file and as you can understand, we can disable interrupts for the CPU with the call of this macro. Let's look on its implementation. First of all note that it depends on the `CONFIG_TRACE_IRQFLAGS_SUPPORT` kernel configuration option:
 
 ```C
 #ifdef CONFIG_TRACE_IRQFLAGS_SUPPORT
@@ -304,7 +304,7 @@ This macro defined in the [include/linux/irqflags.h](https://github.com/torvalds
 #endif
 ```
 
-They are both similar and as you can see have only one difference: the `local_irq_disable` macro contains call of the `trace_hardirqs_off` when `CONFIG_TRACE_IRQFLAGS_SUPPORT` is enabled. There is special feature in the [lockdep](http://lwn.net/Articles/321663/) subsystem - `irq-flags tracing` for tracing `hardirq` and `softirq` state. In our case `lockdep` subsystem can give us interesting information about hard/soft irqs on/off events which are occurs in the system. The `trace_hardirqs_off` function defined in the [kernel/locking/lockdep.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep.c):
+它们是相似的，如你所见，仅有一处区别：当 `CONFIG_TRACE_IRQFLAGS_SUPPORT` 使能时，`local_irq_disable` 宏包含 `trace_hardirqs_off` 的调用。在  [lockdep](http://lwn.net/Articles/321663/) 子系统中有特别的功能 - `irq-flags tracing` 用于跟踪 `hardirq` 和 `softirq` 状态。在我们的例子中，`lockdep` 子系统可以给我们关于发生在系统中的硬/中断开/关事件的有趣信息。`trace_hardirqs_off` 函数定义在 [kernel/locking/lockdep.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep.c) 中：They are both similar and as you can see have only one difference: the `local_irq_disable` macro contains call of the `trace_hardirqs_off` when `CONFIG_TRACE_IRQFLAGS_SUPPORT` is enabled. There is special feature in the [lockdep](http://lwn.net/Articles/321663/) subsystem - `irq-flags tracing` for tracing `hardirq` and `softirq` state. In our case `lockdep` subsystem can give us interesting information about hard/soft irqs on/off events which are occurs in the system. The `trace_hardirqs_off` function defined in the [kernel/locking/lockdep.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep.c):
 
 ```C
 void trace_hardirqs_off(void)
@@ -314,7 +314,7 @@ void trace_hardirqs_off(void)
 EXPORT_SYMBOL(trace_hardirqs_off);
 ```
 
-and just calls `trace_hardirqs_off_caller` function. The `trace_hardirqs_off_caller` checks the `hardirqs_enabled` field of the current process and increases the `redundant_hardirqs_off` if call of the `local_irq_disable` was redundant or the `hardirqs_off_events` if it was not. These two fields and other `lockdep` statistic related fields are defined in the [kernel/locking/lockdep_insides.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep_insides.h) and located in the `lockdep_stats` structure:
+它只是调用了 `trace_hardirqs_off_caller` 函数。`trace_hardirqs_off_caller` 检查当前进程的 `hardirqs_enabled` 字段，如果 `local_irq_disable` 是冗余的，或者不是 `hardirqs_off_events`，就增加 `redundant_hardirqs_off`。这两个字段和其它 `lockdep` 统计相关的字段定义在 [kernel/locking/lockdep_insides.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep_insides.h) 的 `lockdep_stats` 结构中：and just calls `trace_hardirqs_off_caller` function. The `trace_hardirqs_off_caller` checks the `hardirqs_enabled` field of the current process and increases the `redundant_hardirqs_off` if call of the `local_irq_disable` was redundant or the `hardirqs_off_events` if it was not. These two fields and other `lockdep` statistic related fields are defined in the [kernel/locking/lockdep_insides.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/locking/lockdep_insides.h) and located in the `lockdep_stats` structure:
 
 ```C
 struct lockdep_stats {
@@ -329,7 +329,7 @@ int     redundant_softirqs_off;
 }
 ```
 
-If you will set `CONFIG_DEBUG_LOCKDEP` kernel configuration option, the `lockdep_stats_debug_show` function will write all tracing information to the `/proc/lockdep`:
+如果你要设置 `CONFIG_DEBUG_LOCKDEP` 内核配置项，`lockdep_stats_debug_show` 函数会把所有的耿总信息写入 `/proc/lockdep`：If you will set `CONFIG_DEBUG_LOCKDEP` kernel configuration option, the `lockdep_stats_debug_show` function will write all tracing information to the `/proc/lockdep`:
 
 ```C
 static void lockdep_stats_debug_show(struct seq_file *m)
