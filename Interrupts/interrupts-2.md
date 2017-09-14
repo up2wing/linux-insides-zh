@@ -253,7 +253,7 @@ static inline void boot_init_stack_canary(void)
 #endif
 ```
 
-As we can read in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html) the `irq_stack_union` represented by the following union:
+如同我们前面[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html)所阅读到的，`irq_stack_union` 由下述联合表示：As we can read in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html) the `irq_stack_union` represented by the following union:
 
 ```C
 union irq_stack_union {
@@ -266,9 +266,9 @@ union irq_stack_union {
 };
 ```
 
-which defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h). We know that [union](http://en.wikipedia.org/wiki/Union_type) in the [C](http://en.wikipedia.org/wiki/C_%28programming_language%29) programming language is a data structure which stores only one field in a memory. We can see here that structure has first field - `gs_base` which is 40 bytes size and represents bottom of the `irq_stack`. So, after this our check with the `BUILD_BUG_ON` macro should end successfully. (you can read the first part about Linux kernel initialization [process](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-1.html) if you're interesting about the `BUILD_BUG_ON` macro).
+它在 [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) 中定义。我们知道，[C](http://en.wikipedia.org/wiki/C_%28programming_language%29) 编程语言中 [union](http://en.wikipedia.org/wiki/Union_type) 是一种在内存中只存储一个字段的数据结构。我们看到，在该结构体中第一个字段 - `gs_base` 为 40 字节大小，并表示 `irq_stack` 的底。因此，此后我们用 `BUILD_BUG_ON` 宏检测应该成功结束。（如果你对 `BUILD_BUG_ON` 宏感兴趣，可以阅读关于 Linux 内核初始化[过程](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-1.html)的第一部分。）which defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h). We know that [union](http://en.wikipedia.org/wiki/Union_type) in the [C](http://en.wikipedia.org/wiki/C_%28programming_language%29) programming language is a data structure which stores only one field in a memory. We can see here that structure has first fieldwhich is 40 bytes size and represents bottom of the `irq_stack`. So, after this our check with themacro should end successfully. (you can read the first part about Linux kernel initialization [process](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-1.html) if you're interesting about themacro).
 
-After this we calculate new `canary` value based on the random number and [Time Stamp Counter](http://en.wikipedia.org/wiki/Time_Stamp_Counter):
+随后，我们根据随机数和[时间戳计数器](http://en.wikipedia.org/wiki/Time_Stamp_Counter)计算新的 `canary` 值：After this we calculate new `canary` value based on the random number and [Time Stamp Counter](http://en.wikipedia.org/wiki/Time_Stamp_Counter):
 
 ```C
 get_random_bytes(&canary, sizeof(canary));
@@ -276,13 +276,13 @@ tsc = __native_read_tsc();
 canary += tsc + (tsc << 32UL);
 ```
 
-and write `canary` value to the `irq_stack_union` with the `this_cpu_write` macro:
+并使用 `this_cpu_write` 宏将 `canary` 值写入 `irq_stack_union`：and write `canary` value to the `irq_stack_union` with the `this_cpu_write` macro:
 
 ```C
 this_cpu_write(irq_stack_union.stack_canary, canary);
 ```
 
-more about `this_cpu_*` operation you can read in the [Linux kernel documentation](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt).
+更多关于 `this_cpu_*` 操作你可以阅读[Linux 内核文档](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt)。more about `this_cpu_*` operation you can read in the [Linux kernel documentation](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt).
 
 Disabling/Enabling local interrupts
 --------------------------------------------------------------------------------
