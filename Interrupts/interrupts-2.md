@@ -329,7 +329,7 @@ int     redundant_softirqs_off;
 }
 ```
 
-如果你要设置 `CONFIG_DEBUG_LOCKDEP` 内核配置项，`lockdep_stats_debug_show` 函数会把所有的耿总信息写入 `/proc/lockdep`：If you will set `CONFIG_DEBUG_LOCKDEP` kernel configuration option, the `lockdep_stats_debug_show` function will write all tracing information to the `/proc/lockdep`:
+如果你要设置 `CONFIG_DEBUG_LOCKDEP` 内核配置项，`lockdep_stats_debug_show` 函数会把所有的跟踪信息写入 `/proc/lockdep`：If you will set `CONFIG_DEBUG_LOCKDEP` kernel configuration option, the `lockdep_stats_debug_show` function will write all tracing information to the `/proc/lockdep`:
 
 ```C
 static void lockdep_stats_debug_show(struct seq_file *m)
@@ -348,7 +348,7 @@ static void lockdep_stats_debug_show(struct seq_file *m)
 }
 ```
 
-and you can see its result with the:
+并且，你可以看到如下结果：and you can see its result with the:
 
 ```
 $ sudo cat /proc/lockdep
@@ -362,7 +362,7 @@ $ sudo cat /proc/lockdep
  redundant softirq offs:                  0
 ```
 
-Ok, now we know a little about tracing, but more info will be in the separate part about `lockdep` and `tracing`. You can see that the both `local_disable_irq` macros have the same part - `raw_local_irq_disable`. This macro defined in the [arch/x86/include/asm/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/irqflags.h) and expands to the call of the:
+好的，关于跟踪现在我们了解点了，但更多的信息将在另外的关于 `lockdep` 和 `tracing` 中（介绍）。你可以在 `local_disable_irq` 宏中看到相同的部分 - `raw_local_irq_disable`。这个宏在 [arch/x86/include/asm/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/irqflags.h) 中定义，并扩展为如下调用：Ok, now we know a little about tracing, but more info will be in the separate part about `lockdep` and `tracing`. You can see that the both `local_disable_irq` macros have the same part - `raw_local_irq_disable`. This macro defined in the [arch/x86/include/asm/irqflags.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/irqflags.h) and expands to the call of the:
 
 ```C
 static inline void native_irq_disable(void)
@@ -371,7 +371,7 @@ static inline void native_irq_disable(void)
 }
 ```
 
-And you already must remember that `cli` instruction clears the [IF](http://en.wikipedia.org/wiki/Interrupt_flag) flag which determines ability of a processor to handle an interrupt or an exception. Besides the `local_irq_disable`, as you already can know there is an inverse macro - `local_irq_enable`. This macro has the same tracing mechanism and very similar on the `local_irq_enable`, but as you can understand from its name, it enables interrupts with the `sti` instruction:
+而且，你一定记得 `cli` 指令清除 [IF](http://en.wikipedia.org/wiki/Interrupt_flag) 标志，该标志决定了处理器处理中断或异常的能力。除了 `local_irq_disable`，你已经知道了还有一个相反的宏 - `local_irq_enable`。这个宏有相同的跟踪机制，和 `local_irq_enable` 非常类似，但是如你从它的名字所理解的，它使用 `sti` 指令使能中断：And you already must remember that `cli` instruction clears the [IF](http://en.wikipedia.org/wiki/Interrupt_flag) flag which determines ability of a processor to handle an interrupt or an exception. Besides the `local_irq_disable`, as you already can know there is an inverse macro - `local_irq_enable`. This macro has the same tracing mechanism and very similar on the `local_irq_enable`, but as you can understand from its name, it enables interrupts with the `sti` instruction:
 
 ```C
 static inline void native_irq_enable(void)
@@ -380,7 +380,7 @@ static inline void native_irq_enable(void)
 }
 ```
 
-Now we know how `local_irq_disable` and `local_irq_enable` work. It was the first call of the `local_irq_disable` macro, but we will meet these macros many times in the Linux kernel source code. But for now we are in the `start_kernel` function from the [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) and we just disabled `local` interrupts. Why local and why we did it? Previously kernel provided a method to disable interrupts on all processors and it was called `cli`. This function was [removed](https://lwn.net/Articles/291956/) and now we have `local_irq_{enabled,disable}` to disable or enable interrupts on the current processor. After we've disabled the interrupts with the `local_irq_disable` macro, we set the:
+现在我们知道 `local_irq_disable` 和 `local_irq_enable` 是如何工作的。这是 `local_irq_disable` 宏的第一次调用，然而我们在 Linux 内核源码中将会多次遇到这些宏。但是现在我们在 [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) 中的 `start_kernel` 函数中，我们只是禁用了`本地`中断。为什么是`本地`的？我们为什么要这么做？以前内核提供了一种方法来禁所有用处理器上N的中断，称之为 `cli`。这个函数已经被[移除](https://lwn.net/Articles/291956/)，现在我们有 `local_irq_{enabled,disable}` 来禁用或启用当前处理器上的中断。在使用 `local_irq_disable` 宏禁用中断后，我们设置：Now we know how `local_irq_disable` and `local_irq_enable` work. It was the first call of the `local_irq_disable` macro, but we will meet these macros many times in the Linux kernel source code. But for now we are in the `start_kernel` function from the [init/main.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/init/main.c) and we just disabled `local` interrupts. Why local and why we did it? Previously kernel provided a method to disable interrupts on all processors and it was called `cli`. This function was [removed](https://lwn.net/Articles/291956/) and now we have `local_irq_{enabled,disable}` to disable or enable interrupts on the current processor. After we've disabled the interrupts with the `local_irq_disable` macro, we set the:
 
 ```C
 early_boot_irqs_disabled = true;
@@ -392,17 +392,17 @@ The `early_boot_irqs_disabled` variable defined in the [include/linux/kernel.h](
 extern bool early_boot_irqs_disabled;
 ```
 
-and used in the different places. For example it used in the `smp_call_function_many` function from the [kernel/smp.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/smp.c) for the checking possible deadlock when interrupts are disabled:
+并且该变量是在不同的地方使用的。例如：在 [kernel/smp.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/smp.c) 中的 `smp_call_function_many` 函数中使用，用于当中断禁用时检查可能的死锁：and used in the different places. For example it used in the `smp_call_function_many` function from the [kernel/smp.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/kernel/smp.c) for the checking possible deadlock when interrupts are disabled:
 
 ```C
 WARN_ON_ONCE(cpu_online(this_cpu) && irqs_disabled()
                      && !oops_in_progress && !early_boot_irqs_disabled);
 ```
 
-Early trap initialization during kernel initialization
+内核初始化期间早期陷阱初始化Early trap initialization during kernel initialization
 --------------------------------------------------------------------------------
 
-The next functions after the `local_disable_irq` are `boot_cpu_init` and `page_address_init`, but they are not related to the interrupts and exceptions (more about this functions you can read in the chapter about Linux kernel [initialization process](http://0xax.gitbooks.io/linux-insides/content/Initialization/index.html)). The next is the `setup_arch` function. As you can remember this function located in the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel.setup.c) source code file and makes initialization of many different architecture-dependent [stuff](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-4.html). The first interrupts related function which we can see in the `setup_arch` is the - `early_trap_init` function. This function defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) and fills `Interrupt Descriptor Table` with the couple of entries:
+`local_disable_irq` 之后的下一个函数是 `boot_cpu_init` 和 `page_address_init`，但它们与中断和异常无关（更多关于这个函数的信息，你可以阅读 Linux 内核[初始化过程](http://0xax.gitbooks.io/linux-insides/content/Initialization/index.html)）。接下来是 `setup_arch` 函数。你应该记得，这个函数位于 [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel.setup.c) 源码文件中，并且做了很多不同架构相关的[事情](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-4.html)。在 `setup_arch` 中我们可以看到的第一个中断相关的函数是 - `early_trap_init` 函数。这个函数定义在 [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) 中，兵用两个条目来填写`中断描述符表`：The next functions after the `local_disable_irq` are `boot_cpu_init` and `page_address_init`, but they are not related to the interrupts and exceptions (more about this functions you can read in the chapter about Linux kernel [initialization process](http://0xax.gitbooks.io/linux-insides/content/Initialization/index.html)). The next is the `setup_arch` function. As you can remember this function located in the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel.setup.c) source code file and makes initialization of many different architecture-dependent [stuff](http://0xax.gitbooks.io/linux-insides/content/Initialization/linux-initialization-4.html). The first interrupts related function which we can see in the `setup_arch` is the - `early_trap_init` function. This function defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) and fills `Interrupt Descriptor Table` with the couple of entries:
 
 ```C
 void __init early_trap_init(void)
