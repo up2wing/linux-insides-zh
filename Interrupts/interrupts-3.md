@@ -1,12 +1,12 @@
-Interrupts and Interrupt Handling. Part 3.
+中断和中断处理. Part 3.Interrupts and Interrupt Handling. Part 3.
 ================================================================================
 
-Exception Handling
+异常处理Exception Handling
 --------------------------------------------------------------------------------
 
-This is the third part of the [chapter](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html) about an interrupts and an exceptions handling in the Linux kernel and in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html) we stopped at the `setup_arch` function from the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blame/master/arch/x86/kernel/setup.c) source code file.
+这是关于Linux 内核中断和异常处理[章](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html)的第三部分，在上一[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html)中我们在源码文件 [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blame/master/arch/x86/kernel/setup.c) 中的 `setup_arch` 函数停止了。This is the third part of the [chapter](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html) about an interrupts and an exceptions handling in the Linux kernel and in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/index.html) we stopped at the `setup_arch` function from the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/blame/master/arch/x86/kernel/setup.c) source code file.
 
-We already know that this function executes initialization of architecture-specific stuff. In our case the `setup_arch` function does [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture related initializations. The `setup_arch` is big function, and in the previous part we stopped on the setting of the two exceptions handlers for the two following exceptions:
+我们已经知道了，这个函数执行和具体架构相关东西的初始化。在我们的例子中，`setup_arch` 函数执行 [x86_64](https://en.wikipedia.org/wiki/X86-64)  架构相关的初始化。`setup_arch` 是个大函数，在上一部分我们停在了设置下面两个异常的异常处理中：We already know that this function executes initialization of architecture-specific stuff. In our case the `setup_arch` function does [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture related initializations. The `setup_arch` is big function, and in the previous part we stopped on the setting of the two exceptions handlers for the two following exceptions:
 
 * `#DB` - debug exception, transfers control from the interrupted process to the debug handler;
 * `#BP` - breakpoint exception, caused by the `int 3` instruction.
