@@ -416,13 +416,13 @@ void __init early_trap_init(void)
 }
 ```
 
-Here we can see calls of three different functions:
+在这里我们可以看到三个不同的函数调用：Here we can see calls of three different functions:
 
 * `set_intr_gate_ist`
 * `set_system_intr_gate_ist`
 * `set_intr_gate`
 
-All of these functions defined in the [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/desc.h) and do the similar thing but not the same. The first `set_intr_gate_ist` function inserts new an interrupt gate in the `IDT`. Let's look on its implementation:
+所有这些函数定义在 [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/desc.h) 中，做着相似但不相同的事情。第一个 `set_intr_gate_ist` 函数在 `IDT` 中插入一个中断门。让我们来看下它的实现：All of these functions defined in the [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/desc.h) and do the similar thing but not the same. The first `set_intr_gate_ist` function inserts new an interrupt gate in the `IDT`. Let's look on its implementation:
 
 ```C
 static inline void set_intr_gate_ist(int n, void *addr, unsigned ist)
@@ -432,7 +432,7 @@ static inline void set_intr_gate_ist(int n, void *addr, unsigned ist)
 }
 ```
 
-First of all we can see the check that `n` which is [vector number](http://en.wikipedia.org/wiki/Interrupt_vector_table) of the interrupt is not greater than `0xff` or 255. We need to check it because we remember from the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html) that vector number of an interrupt must be between `0` and `255`. In the next step we can see the call of the `_set_gate` function that sets a given interrupt gate to the `IDT` table:
+首先我们可以看到检查中断[向量号](http://en.wikipedia.org/wiki/Interrupt_vector_table) `n` 是否大于 `0xff` 或 255。我们需要检查一下，因为我们记得在上一[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html)中中断向量号必须在 `0` 和 `255` 之间。在下一步中我们可以看到调用 `_set_gate` 函数，将一个给定的中断门设置到 `IDT` 表：First of all we can see the check that `n` which is [vector number](http://en.wikipedia.org/wiki/Interrupt_vector_table) of the interrupt is not greater than `0xff` or 255. We need to check it because we remember from the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-1.html) that vector number of an interrupt must be between `0` and `255`. In the next step we can see the call of the `_set_gate` function that sets a given interrupt gate to the `IDT` table:
 
 ```C
 static inline void _set_gate(int gate, unsigned type, void *addr,
@@ -446,14 +446,14 @@ static inline void _set_gate(int gate, unsigned type, void *addr,
 }
 ```
 
-Here we start from the `pack_gate` function which takes clean `IDT` entry represented by the `gate_desc` structure and fills it with the base address and limit, [Interrupt Stack Table](https://www.kernel.org/doc/Documentation/x86/x86_64/kernel-stacks), [Privilege level](http://en.wikipedia.org/wiki/Privilege_level), type of an interrupt which can be one of the following values:
+这里我们从 `pack_gate` 函数开始，它采用了由 `gate_desc` 结构表示的干净的 `IDT` 项，并用基址和限制、[中断堆栈表](https://www.kernel.org/doc/Documentation/x86/x86_64/kernel-stacks), [特权等级](http://en.wikipedia.org/wiki/Privilege_level)、中断类型来填充它，其中中断类型可以是以下其中之一的值：Here we start from the `pack_gate` function which takes clean `IDT` entry represented by the `gate_desc` structure and fills it with the base address and limit, [Interrupt Stack Table](https://www.kernel.org/doc/Documentation/x86/x86_64/kernel-stacks), [Privilege level](http://en.wikipedia.org/wiki/Privilege_level), type of an interrupt which can be one of the following values:
 
 * `GATE_INTERRUPT`
 * `GATE_TRAP`
 * `GATE_CALL`
 * `GATE_TASK`
 
-and set the present bit for the given `IDT` entry:
+并为给定的 `IDT` 项设置当前位：and set the present bit for the given `IDT` entry:
 
 ```C
 static inline void pack_gate(gate_desc *gate, unsigned type, unsigned long func,
@@ -472,7 +472,7 @@ static inline void pack_gate(gate_desc *gate, unsigned type, unsigned long func,
 }
 ```
 
-After this we write just filled interrupt gate to the `IDT` with the `write_idt_entry` macro which expands to the `native_write_idt_entry` and just copy the interrupt gate to the `idt_table` table by the given index:
+之后我们使用 `write_idt_entry` 宏将刚刚填充的中断门写到 `IDT` 表，该宏扩展为 `native_write_idt_entry`，并且只是将给定索引的中断门拷贝到 `idt_table` 表：After this we write just filled interrupt gate to the `IDT` with the `write_idt_entry` macro which expands to the `native_write_idt_entry` and just copy the interrupt gate to the `idt_table` table by the given index:
 
 ```C
 #define write_idt_entry(dt, entry, g)           native_write_idt_entry(dt, entry, g)
@@ -483,13 +483,13 @@ static inline void native_write_idt_entry(gate_desc *idt, int entry, const gate_
 }
 ```
 
-where `idt_table` is just array of `gate_desc`:
+其中 `idt_table` 就是个 `gate_desc` 数组：where `idt_table` is just array of `gate_desc`:
 
 ```C
 extern gate_desc idt_table[];
 ```
 
-That's all. The second `set_system_intr_gate_ist` function has only one difference from the `set_intr_gate_ist`:
+就这样了。第二个 `set_system_intr_gate_ist` 函数和 `set_intr_gate_ist` 只有一处不同：That's all. The second `set_system_intr_gate_ist` function has only one difference from the `set_intr_gate_ist`:
 
 ```C
 static inline void set_system_intr_gate_ist(int n, void *addr, unsigned ist)
@@ -499,31 +499,31 @@ static inline void set_system_intr_gate_ist(int n, void *addr, unsigned ist)
 }
 ```
 
-Do you see it? Look on the fourth parameter of the `_set_gate`. It is `0x3`. In the `set_intr_gate` it was `0x0`. We know that this parameter represent `DPL` or privilege level. We also know that `0` is the highest privilege level and `3` is the lowest.Now we know how `set_system_intr_gate_ist`, `set_intr_gate_ist`, `set_intr_gate` are work and we can return to the `early_trap_init` function. Let's look on it again:
+看到了吗？请看 `_set_gate` 的第四个参数。这里是 `0x3`。在 `set_intr_gate` 中是 `0x0`。我们知道这个参数表示 `DPL`，即特权等级。我们还知道 `0` 是最高特权等级，`3` 是最低特权等级。现在我们知道了 `set_system_intr_gate_ist`、`set_intr_gate_ist`、`set_intr_gate` 是如何工作的，我们可以返回 `early_trap_init` 函数了。让我们再来看一下：Do you see it? Look on the fourth parameter of the `_set_gate`. It is `0x3`. In the `set_intr_gate` it was `0x0`. We know that this parameter represent `DPL` or privilege level. We also know that `0` is the highest privilege level and `3` is the lowest.Now we know how `set_system_intr_gate_ist`, `set_intr_gate_ist`, `set_intr_gate` are work and we can return to the `early_trap_init` function. Let's look on it again:
 
 ```C
 set_intr_gate_ist(X86_TRAP_DB, &debug, DEBUG_STACK);
 set_system_intr_gate_ist(X86_TRAP_BP, &int3, DEBUG_STACK);
 ```
 
-We set two `IDT` entries for the `#DB` interrupt and `int3`. These functions takes the same set of parameters:
+我们为 `#DB` 和 `int3` 中断设置了 `IDT` 项。这些函数具有相同的参数集合：We set two `IDT` entries for the `#DB` interrupt and `int3`. These functions takes the same set of parameters:
 
-* vector number of an interrupt;
-* address of an interrupt handler;
-* interrupt stack table index.
+* 中断向量号；vector number of an interrupt;
+* 中断处理程序地址；address of an interrupt handler;
+* 中断堆栈表索引。interrupt stack table index.
 
-That's all. More about interrupts and handlers you will know in the next parts.
+就这么多了。有关中断和处理程序的更多信息，你将在下面的部分了解。That's all. More about interrupts and handlers you will know in the next parts.
 
-Conclusion
+结论Conclusion
 --------------------------------------------------------------------------------
 
-It is the end of the second part about interrupts and interrupt handling in the Linux kernel. We saw the some theory in the previous part and started to dive into interrupts and exceptions handling in the current part. We have started from the earliest parts in the Linux kernel source code which are related to the interrupts. In the next part we will continue to dive into this interesting theme and will know more about interrupt handling process.
+关于 Linux 内核中断和中断处理的第二部分就结束了。我们看了上一部分的一些理论，并开始深入本部分的中断和异常处理。我们是从最早与中断相关的 Linux 内核源码开始的。在下一部分，我们将继续深入研究这一有趣的主题，并了解更多关于中断处理程序的信息。It is the end of the second part about interrupts and interrupt handling in the Linux kernel. We saw the some theory in the previous part and started to dive into interrupts and exceptions handling in the current part. We have started from the earliest parts in the Linux kernel source code which are related to the interrupts. In the next part we will continue to dive into this interesting theme and will know more about interrupt handling process.
 
 If you have any questions or suggestions write me a comment or ping me at [twitter](https://twitter.com/0xAX).
 
 **Please note that English is not my first language, And I am really sorry for any inconvenience. If you find any mistakes please send me PR to [linux-insides](https://github.com/0xAX/linux-insides).**
 
-Links
+链接Links
 --------------------------------------------------------------------------------
 
 * [IDT](http://en.wikipedia.org/wiki/Interrupt_descriptor_table)
