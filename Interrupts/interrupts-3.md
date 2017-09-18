@@ -8,12 +8,12 @@
 
 我们已经知道了，这个函数执行和具体架构相关东西的初始化。在我们的例子中，`setup_arch` 函数执行 [x86_64](https://en.wikipedia.org/wiki/X86-64)  架构相关的初始化。`setup_arch` 是个大函数，在上一部分我们停在了设置下面两个异常的异常处理中：We already know that this function executes initialization of architecture-specific stuff. In our case the `setup_arch` function does [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture related initializations. The `setup_arch` is big function, and in the previous part we stopped on the setting of the two exceptions handlers for the two following exceptions:
 
-* `#DB` - debug exception, transfers control from the interrupted process to the debug handler;
-* `#BP` - breakpoint exception, caused by the `int 3` instruction.
+* `#DB` - 调试异常，将控制从中断的进程传递到调试处理程序；debug exception, transfers control from the interrupted process to the debug handler;
+* `#BP` - 由 `int 3` 指令引发的断点异常。breakpoint exception, caused by the `int 3` instruction.
 
-These exceptions allow the `x86_64` architecture to have early exception processing for the purpose of debugging via the [kgdb](https://en.wikipedia.org/wiki/KGDB).
+这些异常允许 `x86_64` 架构具有早期异常处理（功能），以通过 [kgdb](https://en.wikipedia.org/wiki/KGDB) 进行调试。These exceptions allow the `x86_64` architecture to have early exception processing for the purpose of debugging via the [kgdb](https://en.wikipedia.org/wiki/KGDB).
 
-As you can remember we set these exceptions handlers in the `early_trap_init` function:
+你应该记得，我们在 `early_trap_init` 函数中设置这些异常：As you can remember we set these exceptions handlers in the `early_trap_init` function:
 
 ```C
 void __init early_trap_init(void)
@@ -24,18 +24,18 @@ void __init early_trap_init(void)
 }
 ```
 
-from the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). We already saw implementation of the `set_intr_gate_ist` and `set_system_intr_gate_ist` functions in the previous part and now we will look on the implementation of these two exceptions handlers.
+该函数在 [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c) 中。在前一部分我们已经看了 `set_intr_gate_ist` 和 `set_system_intr_gate_ist` 的实现，现在我们要看下这两个异常处理程序的实现。from the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). We already saw implementation of the `set_intr_gate_ist` and `set_system_intr_gate_ist` functions in the previous part and now we will look on the implementation of these two exceptions handlers.
 
-Debug and Breakpoint exceptions
+调试和断点异常Debug and Breakpoint exceptions
 --------------------------------------------------------------------------------
 
-Ok, we setup exception handlers in the `early_trap_init` function for the `#DB` and `#BP` exceptions and now time is to consider their implementations. But before we will do this, first of all let's look on details of these exceptions.
+好的，我们在 `early_trap_init` 函数中为 `#DB` 和 `#BP` 设置异常处理程序，现在是时候考虑下它们的实现了。但是在我们这么做之前，首先让我们看下这些异常的细节。Ok, we setup exception handlers in the `early_trap_init` function for the `#DB` and `#BP` exceptions and now time is to consider their implementations. But before we will do this, first of all let's look on details of these exceptions.
 
-The first exceptions - `#DB` or `debug` exception occurs when a debug event occurs. For example - attempt to change the contents of a [debug register](http://en.wikipedia.org/wiki/X86_debug_register). Debug registers are special registers that were presented in `x86` processors starting from the [Intel 80386](http://en.wikipedia.org/wiki/Intel_80386) processor and as you can understand from name of this CPU extension, main purpose of these registers is debugging.
+第一个异常 - `#DB` 或者 `debug` 异常当调试事件发生时发生。例如 - 试图改变[调试寄存器](http://en.wikipedia.org/wiki/X86_debug_register)内容时。调试寄存器是一种特殊的寄存器，是 `x86` 处理器从 [Intel 80386](http://en.wikipedia.org/wiki/Intel_80386) 开始引入的，并且就像从这个 CPU 扩展的名字你可以理解的，这些寄存器的主要目的就是调试。The first exceptions - `#DB` or `debug` exception occurs when a debug event occurs. For example - attempt to change the contents of a [debug register](http://en.wikipedia.org/wiki/X86_debug_register). Debug registers are special registers that were presented in `x86` processors starting from the [Intel 80386](http://en.wikipedia.org/wiki/Intel_80386) processor and as you can understand from name of this CPU extension, main purpose of these registers is debugging.
 
-These registers allow to set breakpoints on the code and read or write data to trace it. Debug registers may be accessed only in the privileged mode and an attempt to read or write the debug registers when executing at any other privilege level causes a [general protection fault](https://en.wikipedia.org/wiki/General_protection_fault) exception. That's why we have used `set_intr_gate_ist` for the `#DB` exception, but not the `set_system_intr_gate_ist`.
+这些寄存器允许在代码上设置断点，并且读取或写入数据来跟踪它。调试寄存器必须在特权模式下访问，试图在其它特权级别下读写调试寄存器会导致[通用保护错误](https://en.wikipedia.org/wiki/General_protection_fault)异常。这就是我们为什么为 `#DB` 异常使用 `set_intr_gate_ist`，而不是 `set_system_intr_gate_ist`。These registers allow to set breakpoints on the code and read or write data to trace it. Debug registers may be accessed only in the privileged mode and an attempt to read or write the debug registers when executing at any other privilege level causes a [general protection fault](https://en.wikipedia.org/wiki/General_protection_fault) exception. That's why we have used `set_intr_gate_ist` for the `#DB` exception, but not the `set_system_intr_gate_ist`.
 
-The verctor number of the `#DB` exceptions is `1` (we pass it as `X86_TRAP_DB`) and as we may read in specification, this exception has no error code:
+`#DB` 异常的向量号是 `1`（我们将其作为 `X86_TRAP_DB` 传递），我们可以在规范中读到，这个异常没有错误码：The verctor number of the `#DB` exceptions is `1` (we pass it as `X86_TRAP_DB`) and as we may read in specification, this exception has no error code:
 
 ```
 +-----------------------------------------------------+
@@ -45,7 +45,7 @@ The verctor number of the `#DB` exceptions is `1` (we pass it as `X86_TRAP_DB`) 
 +-----------------------------------------------------+
 ```
 
-The second exception is `#BP` or `breakpoint` exception occurs when processor executes the [int 3](http://en.wikipedia.org/wiki/INT_%28x86_instruction%29#INT_3) instruction. Unlike the `DB` exception, the `#BP` exception may occur in userspace. We can add it anywhere in our code, for example let's look on the simple program:
+第二个异常是 `#BP` 或 `breakpoint` 异常，发生在处理器执行 [int 3](http://en.wikipedia.org/wiki/INT_%28x86_instruction%29#INT_3) 指令时。与 `DB` 异常不同，`#BP` 异常可以发生在用户态。我们可以将其添加到我们的代码中，例如，让我们来看个简单的程序：The second exception is `#BP` or `breakpoint` exception occurs when processor executes the [int 3](http://en.wikipedia.org/wiki/INT_%28x86_instruction%29#INT_3) instruction. Unlike the `DB` exception, the `#BP` exception may occur in userspace. We can add it anywhere in our code, for example let's look on the simple program:
 
 ```C
 // breakpoint.c
@@ -61,7 +61,7 @@ int main() {
 }
 ```
 
-If we will compile and run this program, we will see following output:
+如果我们编译并运行这个程序，我们会看到如下输出：If we will compile and run this program, we will see following output:
 
 ```
 $ gcc breakpoint.c -o breakpoint
@@ -69,7 +69,7 @@ i equal to: 0
 Trace/breakpoint trap
 ```
 
-But if will run it with gdb, we will see our breakpoint and can continue execution of our program:
+但如果在 gdb 中运行这个程序，我们就会看到我们的断点，并可以继续执行我们的程序：But if will run it with gdb, we will see our breakpoint and can continue execution of our program:
 
 ```
 $ gdb breakpoint
@@ -102,7 +102,7 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 ...
 ```
 
-From this moment we know a little about these two exceptions and we can move on to consideration of their handlers.
+从此刻起，我们了解了这两个异常，可以继续分析它们的处理程序了。From this moment we know a little about these two exceptions and we can move on to consideration of their handlers.
 
 Preparation before an exception handler
 --------------------------------------------------------------------------------
