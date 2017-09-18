@@ -104,15 +104,15 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 
 从此刻起，我们了解了这两个异常，可以继续分析它们的处理程序了。From this moment we know a little about these two exceptions and we can move on to consideration of their handlers.
 
-Preparation before an exception handler
+异常处理之前的准备Preparation before an exception handler
 --------------------------------------------------------------------------------
 
-As you may note before, the `set_intr_gate_ist` and `set_system_intr_gate_ist` functions takes an addresses of exceptions handlers in theirs second parameter. In or case our two exception handlers will be:
+你之前应该注意到， `set_intr_gate_ist` 和 `set_system_intr_gate_ist` 函数将异常处理程序的地址作为它们的第二个参数。在我们的例子中，两个异常处理程序是：As you may note before, the `set_intr_gate_ist` and `set_system_intr_gate_ist` functions takes an addresses of exceptions handlers in theirs second parameter. In or case our two exception handlers will be:
 
 * `debug`;
 * `int3`.
 
-You will not find these functions in the C code. all of that could be found in the kernel's `*.c/*.h` files only definition of these functions which are located in the [arch/x86/include/asm/traps.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traps.h) kernel header file:
+在 C 代码中你找不到这些函数。所有这些函数都可以在内核的 `*.c/*.h` 中找到，这些函数定义在 [arch/x86/include/asm/traps.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traps.h) 内核头文件中：You will not find these functions in the C code. all of that could be found in the kernel's `*.c/*.h` files only definition of these functions which are located in the [arch/x86/include/asm/traps.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traps.h) kernel header file:
 
 ```C
 asmlinkage void debug(void);
