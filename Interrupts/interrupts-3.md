@@ -124,9 +124,9 @@ and
 asmlinkage void int3(void);
 ```
 
-You may note `asmlinkage` directive in definitions of these functions. The directive is the special specificator of the [gcc](http://en.wikipedia.org/wiki/GNU_Compiler_Collection). Actually for a `C` functions which are called from assembly, we need in explicit declaration of the function calling convention. In our case, if function made with `asmlinkage` descriptor, then `gcc` will compile the function to retrieve parameters from stack.
+你可能注意到了这些函数定义中的 `asmlinkage` 指令。该指令是 [gcc](http://en.wikipedia.org/wiki/GNU_Compiler_Collection) 的特殊说明符。实际上对于在汇编里调用的 `C` 函数，我们需要明确声明函数调用约定。在我们的例子中，如果函数使用了 `asmlinkage` 描述符，`gcc` 将编译该函数为从栈中取参数。You may note `asmlinkage` directive in definitions of these functions. The directive is the special specificator of the [gcc](http://en.wikipedia.org/wiki/GNU_Compiler_Collection). Actually for a `C` functions which are called from assembly, we need in explicit declaration of the function calling convention. In our case, if function made with `asmlinkage` descriptor, then `gcc` will compile the function to retrieve parameters from stack.
 
-So, both handlers are defined in the [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) assembly source code file with the `idtentry` macro:
+所以，这两个处理函数都是用 `idtentry` 宏定义在 [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) 汇编源码文件中：So, both handlers are defined in the [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) assembly source code file with the `idtentry` macro:
 
 ```assembly
 idtentry debug do_debug has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
@@ -138,20 +138,20 @@ and
 idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 ```
 
-Each exception handler may be consists from two parts. The first part is generic part and it is the same for all exception handlers. An exception handler should to save  [general purpose registers](https://en.wikipedia.org/wiki/Processor_register) on the stack, switch to kernel stack if an exception came from userspace and transfer control to the second part of an exception handler. The second part of an exception handler does certain work depends on certain exception. For example page fault exception handler should find virtual page for given address, invalid opcode exception handler should send `SIGILL` [signal](https://en.wikipedia.org/wiki/Unix_signal) and etc.
+每个异常处理程序可能由两部分组成。第一部分是通用部分，对于所有异常处理程序都是相同的。一个异常处理程序要在栈上保存[通用寄存器](https://en.wikipedia.org/wiki/Processor_register)，如果异常来自用户态来并将控制权移交给异常处理程序的第二部分，则切换到内核栈。异常处理程序的第二部分做某些工作取决于某些异常。例如，缺页异常应该找到给定地址的虚拟页面，无效操作码异常处理程序应该发送 `SIGILL` [signal](https://en.wikipedia.org/wiki/Unix_signal)，等等。Each exception handler may be consists from two parts. The first part is generic part and it is the same for all exception handlers. An exception handler should to save  [general purpose registers](https://en.wikipedia.org/wiki/Processor_register) on the stack, switch to kernel stack if an exception came from userspace and transfer control to the second part of an exception handler. The second part of an exception handler does certain work depends on certain exception. For example page fault exception handler should find virtual page for given address, invalid opcode exception handler should send `SIGILL` [signal](https://en.wikipedia.org/wiki/Unix_signal) and etc.
 
-As we just saw, an exception handler starts from definition of the `idtentry` macro from the [arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) assembly source code file, so let's look at implementation of this macro. As we may see, the `idtentry` macro takes five arguments:
+正如我们刚看到的，异常处理程序从 [arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) 汇编源码文件的 `idtentry` 宏定义开始，所以让我们来看下这个宏的实现。如我们所见，`idtentry` 宏有五个参数：As we just saw, an exception handler starts from definition of the `idtentry` macro from the [arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) assembly source code file, so let's look at implementation of this macro. As we may see, the `idtentry` macro takes five arguments:
 
-* `sym` - defines global symbol with the `.globl name` which will be an an entry of exception handler;
-* `do_sym` - symbol name which represents a secondary entry of an exception handler;
-* `has_error_code` - information about existence of an error code of exception.
+* `sym` - 使用 `.globl name` 定义全局符号，它将是异常处理程序的一个条目；defines global symbol with the `.globl name` which will be an an entry of exception handler;
+* `do_sym` - 表示异常处理程序辅助条目的符号名；symbol name which represents a secondary entry of an exception handler;
+* `has_error_code` - 有关异常错误码存在的信息information about existence of an error code of exception.
 
-The last two parameters are optional:
+最后两个参数是可选的：The last two parameters are optional:
 
-* `paranoid` - shows us how we need to check current mode (will see explanation in details later);
-* `shift_ist` - shows us is an exception running at `Interrupt Stack Table`.
+* `paranoid` - 显示我们需要如何检测当前模式（稍后会详细解释）；shows us how we need to check current mode (will see explanation in details later);
+* `shift_ist` - 显示异常运行在`中断堆栈标`。shows us is an exception running at `Interrupt Stack Table`.
 
-Definition of the `.idtentry` macro looks:
+`.idtentry` 宏的定义为：Definition of the `.idtentry` macro looks:
 
 ```assembly
 .macro idtentry sym do_sym has_error_code:req paranoid=0 shift_ist=-1
@@ -163,7 +163,7 @@ END(\sym)
 .endm
 ```
 
-Before we will consider internals of the `idtentry` macro, we should to know state of stack when an exception occurs. As we may read in the [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html), the state of stack when an exception occurs is following:
+在我们研究 `idtentry` 宏的本质前，我们应该知道当异常发生时栈的状态。我们可以阅读 [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html)，当异常发生时栈的状态如下：Before we will consider internals of the `idtentry` macro, we should to know state of stack when an exception occurs. As we may read in the [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html), the state of stack when an exception occurs is following:
 
 ```
     +------------+
