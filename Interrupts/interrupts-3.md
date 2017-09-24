@@ -132,7 +132,7 @@ asmlinkage void int3(void);
 idtentry debug do_debug has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 ```
 
-and
+以及and
 
 ```assembly
 idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
@@ -149,7 +149,7 @@ idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 最后两个参数是可选的：The last two parameters are optional:
 
 * `paranoid` - 显示我们需要如何检测当前模式（稍后会详细解释）；shows us how we need to check current mode (will see explanation in details later);
-* `shift_ist` - 显示异常运行在`中断堆栈标`。shows us is an exception running at `Interrupt Stack Table`.
+* `shift_ist` - 显示异常运行在`中断堆栈表`。shows us is an exception running at `Interrupt Stack Table`.
 
 `.idtentry` 宏的定义为：Definition of the `.idtentry` macro looks:
 
@@ -163,7 +163,7 @@ END(\sym)
 .endm
 ```
 
-在我们研究 `idtentry` 宏的本质前，我们应该知道当异常发生时栈的状态。我们可以阅读 [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html)，当异常发生时栈的状态如下：Before we will consider internals of the `idtentry` macro, we should to know state of stack when an exception occurs. As we may read in the [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html), the state of stack when an exception occurs is following:
+在我们研究 `idtentry` 宏的本质前，我们应该知道当异常发生时栈的状态。我们可以阅读 [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html)得知，当异常发生时栈的状态如下：Before we will consider internals of the `idtentry` macro, we should to know state of stack when an exception occurs. As we may read in the [Intel® 64 and IA-32 Architectures Software Developer’s Manual 3A](http://www.intel.com/content/www/us/en/processors/architectures-software-developer-manuals.html), the state of stack when an exception occurs is following:
 
 ```
     +------------+
@@ -176,14 +176,14 @@ END(\sym)
     +------------+
 ```
 
-Now we may start to consider implementation of the `idtmacro`. Both `#DB` and `BP` exception handlers are defined as:
+现在我们可以开始分析 `idt macro` 的实现了。`#DB` 和 `BP` 异常处理都定义为：Now we may start to consider implementation of the `idtmacro`. Both `#DB` and `BP` exception handlers are defined as:
 
 ```assembly
 idtentry debug do_debug has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 ```
 
-If we will look at these definitions, we may know that compiler will generate two routines with `debug` and `int3` names and both of these exception handlers will call `do_debug` and `do_int3` secondary handlers after some preparation. The third parameter defines existence of error code and as we may see both our exception do not have them. As we may see on the diagram above, processor pushes error code on stack if an exception provides it. In our case, the `debug` and `int3` exception do not have error codes. This may bring some difficulties because stack will look differently for exceptions which provides error code and for exceptions which not. That's why implementation of the `idtentry` macro starts from putting a fake error code to the stack if an exception does not provide it:
+如果我们看下这些定义，我们就会知道编译将会产生两个名为 `debug` and `int3` 的例程，这两个异常处理程序在一些准备工作之后，将会调用 `do_debug` 和 `do_int3` 辅助处理程序。第三个参数定义了错误码是否存在，我们可看到我们的异常都没有这两个参数。如上图所示，如果异常提供了错误码，处理则将其压栈。在我们的例子中， `debug` 和 `int3` 异常都没有错误码。这可能会带来一些困难，因为对于提供了错误码和没提供错误码的异常，栈看起来就不同了。这是为什么如果一个异常没有提供错误码， `idtentry` 宏的实现会从压一个假的错误码入栈开始：If we will look at these definitions, we may know that compiler will generate two routines with `debug` and `int3` names and both of these exception handlers will call `do_debug` and `do_int3` secondary handlers after some preparation. The third parameter defines existence of error code and as we may see both our exception do not have them. As we may see on the diagram above, processor pushes error code on stack if an exception provides it. In our case, the `debug` and `int3` exception do not have error codes. This may bring some difficulties because stack will look differently for exceptions which provides error code and for exceptions which not. That's why implementation of the `idtentry` macro starts from putting a fake error code to the stack if an exception does not provide it:
 
 ```assembly
 .ifeq \has_error_code
@@ -191,11 +191,11 @@ If we will look at these definitions, we may know that compiler will generate tw
 .endif
 ```
 
-But it is not only fake error-code. Moreover the `-1` also represents invalid system call number, so that the system call restart logic will not be triggered.
+但它不仅是一个假的错误码。此外， `-1` 也表示无效的系统调用号，使得系统调用重启逻辑不会被触发。But it is not only fake error-code. Moreover the `-1` also represents invalid system call number, so that the system call restart logic will not be triggered.
 
-The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
+`idtentry` 宏的最后两个参数 `shift_ist` 和 `paranoid` 使我们知道一个异常处理程序是否从`中断堆栈表`运行栈。你已经知道系统中的每个内核线程都有自己的栈。除了这些栈外，还有一些与每个处理器相关的专门的栈。这些栈其中之一是 - 异常栈。[x86_64](https://en.wikipedia.org/wiki/X86-64) 架构提供了特殊的特性，称之为`中断堆栈表`。这个特性允许切换到指定事件的新栈，例如像`双重错误`这样的原子异常等等。因此 `shift_ist` 参数允许我们知道是否需要为一个异常处理函数切换到 `IST` 栈。The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
 
-The second parameter - `paranoid` defines the method which helps us to know did we come from userspace or not to an exception handler. The easiest way to determine this is to via `CPL` or `Current Privilege Level` in `CS` segment register. If it is equal to `3`, we came from userspace, if zero we came from kernel space:
+第二个参数 - `paranoid` 定义了有助于我们知道来自用户态还是异常处理程序的方法。确定这一点的最简单的方法是通过 `CS` 段寄存器中的 `CPL`，即`当前特权级别`：如果它等于 `3`，我们来自用户态，如果是 `0`，则是来自内核态：The second parameter - `paranoid` defines the method which helps us to know did we come from userspace or not to an exception handler. The easiest way to determine this is to via `CPL` or `Current Privilege Level` in `CS` segment register. If it is equal to `3`, we came from userspace, if zero we came from kernel space:
 
 ```
 testl $3,CS(%rsp)
@@ -206,14 +206,14 @@ jnz userspace
 // we are from the kernel space
 ```
 
-But unfortunately this method does not give a 100% guarantee. As described in the kernel documentation:
+但不幸的是，这种方法不能给予 100% 的保证。内个文档中这样描述：But unfortunately this method does not give a 100% guarantee. As described in the kernel documentation:
 
-> if we are in an NMI/MCE/DEBUG/whatever super-atomic entry context,
-> which might have triggered right after a normal entry wrote CS to the
-> stack but before we executed SWAPGS, then the only safe way to check
-> for GS is the slower method: the RDMSR.
+> 如果我们处在一个NMI/MCE/DEBUG/ 任何超原子入口上下文中，if we are in an NMI/MCE/DEBUG/whatever super-atomic entry context,
+> 那将会在一个普通项将 CS 写入栈之后which might have triggered right after a normal entry wrote CS to the
+> 但是在我们执行 SWAPGS 之后触发，那么检查 GS 唯一安全的方法则是：RDMSR，stack but before we executed SWAPGS, then the only safe way to check
+> 这个方法比较慢for GS is the slower method: the RDMSR.
 
-In other words for example `NMI` could happen inside the critical section of a [swapgs](http://www.felixcloutier.com/x86/SWAPGS.html) instruction. In this way we should check value of the `MSR_GS_BASE` [model specific register](https://en.wikipedia.org/wiki/Model-specific_register) which stores pointer to the start of per-cpu area. So to check did we come from userspace or not, we should to check value of the `MSR_GS_BASE` model specific register and if it is negative we came from kernel space, in other way we came from userspace:
+换句话说，比如 `NMI`，可能发生在 [swapgs](http://www.felixcloutier.com/x86/SWAPGS.html) 指令的临界区内。使用这种方法，我们应检查 `MSR_GS_BASE` [MSR 寄存器](https://en.wikipedia.org/wiki/Model-specific_register) 的值，该寄存器保存了指向 per-cpu 区域起始（地址）的指针。因此要检查我们是否来自用户态，我们应该检查 `MSR_GS_BASE` MSR 寄存器的值，如果它为负，我们来自内核态，否则来自用户态：In other words for example `NMI` could happen inside the critical section of a [swapgs](http://www.felixcloutier.com/x86/SWAPGS.html) instruction. In this way we should check value of the `MSR_GS_BASE` [model specific register](https://en.wikipedia.org/wiki/Model-specific_register) which stores pointer to the start of per-cpu area. So to check did we come from userspace or not, we should to check value of the `MSR_GS_BASE` model specific register and if it is negative we came from kernel space, in other way we came from userspace:
 
 ```assembly
 movl $MSR_GS_BASE,%ecx
@@ -222,15 +222,15 @@ testl %edx,%edx
 js 1f
 ```
 
-In first two lines of code we read value of the `MSR_GS_BASE` model specific register into `edx:eax` pair. We can't set negative value to the `gs` from userspace. But from other side we know that direct mapping of the physical memory starts from the `0xffff880000000000` virtual address. In this way, `MSR_GS_BASE` will contain an address from `0xffff880000000000` to `0xffffc7ffffffffff`. After the `rdmsr` instruction will be executed, the smallest possible value in the `%edx` register will be - `0xffff8800` which is `-30720` in unsigned 4 bytes. That's why kernel space `gs` which points to start of `per-cpu` area will contain negative value.
+前两行代码，我们读取 `MSR_GS_BASE` MSR 寄存器的值到 `edx:eax` 对。我们无法为用户态的 `gs` 设置负值。但是另一方面，我们知道物理地址的直接映射从 `0xffff880000000000` 虚拟机地址开始。这样，`MSR_GS_BASE` 将包含从 `0xffff880000000000` 到 `0xffffc7ffffffffff` 的地址。执行 `rdmsr` 指令后，在 `%edx` 寄存器中的最小值可能是 - `0xffff8800`，即无符号 4 字节的 `-30720`。这是为什么内核空间指向 `per-cpu` 区域起始（地址）的 `gs` 会包含负值。In first two lines of code we read value of the `MSR_GS_BASE` model specific register into `edx:eax` pair. We can't set negative value to the `gs` from userspace. But from other side we know that direct mapping of the physical memory starts from the `0xffff880000000000` virtual address. In this way, `MSR_GS_BASE` will contain an address from `0xffff880000000000` to `0xffffc7ffffffffff`. After the `rdmsr` instruction will be executed, the smallest possible value in the `%edx` register will be - `0xffff8800` which is `-30720` in unsigned 4 bytes. That's why kernel space `gs` which points to start of `per-cpu` area will contain negative value.
 
-After we pushed fake error code on the stack, we should allocate space for general purpose registers with:
+在我们将错误码压栈后，我们应该为通用寄存器分配空间：After we pushed fake error code on the stack, we should allocate space for general purpose registers with:
 
 ```assembly
 ALLOC_PT_GPREGS_ON_STACK
 ```
 
-macro which is defined in the [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file. This macro just allocates 15*8 bytes space on the stack to preserve general purpose registers:
+该宏定义在 [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中。这个红光只是分配 15*8 字节空间来保存通用寄存器：macro which is defined in the [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file. This macro just allocates 15*8 bytes space on the stack to preserve general purpose registers:
 
 ```assembly
 .macro ALLOC_PT_GPREGS_ON_STACK addskip=0
@@ -238,7 +238,7 @@ macro which is defined in the [arch/x86/entry/calling.h](https://github.com/torv
 .endm
 ```
 
-So the stack will look like this after execution of the `ALLOC_PT_GPREGS_ON_STACK`:
+因此，在执行了 `ALLOC_PT_GPREGS_ON_STACK` 之后，栈看起来像这样：So the stack will look like this after execution of the `ALLOC_PT_GPREGS_ON_STACK`:
 
 ```
      +------------+
@@ -267,7 +267,7 @@ So the stack will look like this after execution of the `ALLOC_PT_GPREGS_ON_STAC
      +------------+
 ```
 
-After we allocated space for general purpose registers, we do some checks to understand did an exception come from userspace or not and if yes, we should move back to an interrupted process stack or stay on exception stack:
+在我们为通用寄存器分配了空间后，我们做一些检查，以了解一个异常是否来自用户态，如果是，我们应该回到被中断程序的栈或者停留在异常栈：After we allocated space for general purpose registers, we do some checks to understand did an exception come from userspace or not and if yes, we should move back to an interrupted process stack or stay on exception stack:
 
 ```assembly
 .if \paranoid
@@ -281,7 +281,7 @@ After we allocated space for general purpose registers, we do some checks to und
 .endif
 ```
 
-Let's consider all of these there cases in course.
+让我们来考虑所有的这些情况。Let's consider all of these there cases in course.
 
 An exception occured in userspace
 --------------------------------------------------------------------------------
