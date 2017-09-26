@@ -283,25 +283,25 @@ ALLOC_PT_GPREGS_ON_STACK
 
 让我们来考虑所有的这些情况。Let's consider all of these there cases in course.
 
-An exception occured in userspace
+用户空间发生的异常An exception occured in userspace
 --------------------------------------------------------------------------------
 
-In the first let's consider a case when an exception has `paranoid=1` like our `debug` and `int3` exceptions. In this case we check selector from `CS` segment register and jump at `1f` label if we came from userspace or the `paranoid_entry` will be called in other way.
+首先让我们一个有 `paranoid=1` 的异常，例如我们的 `debug` 和 `int3` 异常。在这种情况下，我们检查 `CS` 段寄存器的选择符，如果我们来自用户空间就跳到 `1f` 标签，否则调用 `paranoid_entry`。In the first let's consider a case when an exception has `paranoid=1` like our `debug` and `int3` exceptions. In this case we check selector from `CS` segment register and jump at `1f` label if we came from userspace or the `paranoid_entry` will be called in other way.
 
-Let's consider first case when we came from userspace to an exception handler. As described above we should jump at `1` label. The `1` label starts from the call of the
+让我们考虑下第一种情况，从用户空间到异常处理程序。如上所述，我们应该跳转到 `1` 标签。`1` 标签从调用Let's consider first case when we came from userspace to an exception handler. As described above we should jump at `1` label. The `1` label starts from the call of the
 
 ```assembly
 call	error_entry
 ```
 
-routine which saves all general purpose registers in the previously allocated area on the stack:
+例程开始，该例程将所有通用寄存器保存在栈中先前分配的区域中：routine which saves all general purpose registers in the previously allocated area on the stack:
 
 ```assembly
 SAVE_C_REGS 8
 SAVE_EXTRA_REGS 8
 ```
 
-These both macros are defined in the  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file and just move values of general purpose registers to a certain place at the stack, for example:
+这两个红光都定义在  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中，只是将通用寄存器的值移动到栈中的某个位置，如：These both macros are defined in the  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file and just move values of general purpose registers to a certain place at the stack, for example:
 
 ```assembly
 .macro SAVE_EXTRA_REGS offset=0
@@ -314,7 +314,7 @@ These both macros are defined in the  [arch/x86/entry/calling.h](https://github.
 .endm
 ```
 
-After execution of `SAVE_C_REGS` and `SAVE_EXTRA_REGS` the stack will look:
+执行了 `SAVE_C_REGS` 和 `SAVE_EXTRA_REGS` 之后，栈看起来是这样：After execution of `SAVE_C_REGS` and `SAVE_EXTRA_REGS` the stack will look:
 
 ```
      +------------+
@@ -343,16 +343,16 @@ After execution of `SAVE_C_REGS` and `SAVE_EXTRA_REGS` the stack will look:
      +------------+
 ```
 
-After the kernel saved general purpose registers at the stack, we should check that we came from userspace space again with:
+在内核在栈中保存了通用寄存器后，我们应该再次检查我们是来自用户空间的：After the kernel saved general purpose registers at the stack, we should check that we came from userspace space again with:
 
 ```assembly
 testb	$3, CS+8(%rsp)
 jz	.Lerror_kernelspace
 ```
 
-because we may have potentially fault if as described in documentation truncated `%RIP` was reported. Anyway, in both cases the [SWAPGS](http://www.felixcloutier.com/x86/SWAPGS.html) instruction will be executed and values from `MSR_KERNEL_GS_BASE` and `MSR_GS_BASE` will be swapped. From this moment the `%gs` register will point to the base address of kernel structures. So, the `SWAPGS` instruction is called and it was main point of the `error_entry` routing.
+因为假如如文档所述截断 `%RIP` 上报，我们就可能会有潜在的错误。无论如何，这两种情况下 [SWAPGS](http://www.felixcloutier.com/x86/SWAPGS.html) 都会执行， `MSR_KERNEL_GS_BASE` 和 `MSR_GS_BASE` 的值会被交换。从此刻起，`%gs` 寄存器将指向内核结构的基址。因此，`SWAPGS` 指令被调用，并且它是 `error_entry` 的主要点。because we may have potentially fault if as described in documentation truncated `%RIP` was reported. Anyway, in both cases the [SWAPGS](http://www.felixcloutier.com/x86/SWAPGS.html) instruction will be executed and values from `MSR_KERNEL_GS_BASE` and `MSR_GS_BASE` will be swapped. From this moment the `%gs` register will point to the base address of kernel structures. So, the `SWAPGS` instruction is called and it was main point of the `error_entry` routing.
 
-Now we can back to the `idtentry` macro. We may see following assembler code after the call of `error_entry`:
+现在我们回到 `idtentry` 宏。在 `error_entry` 调用之后，我们可以看到如下汇编代码：Now we can back to the `idtentry` macro. We may see following assembler code after the call of `error_entry`:
 
 ```assembly
 movq	%rsp, %rdi
