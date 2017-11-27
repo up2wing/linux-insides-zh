@@ -193,7 +193,7 @@ idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 
 但它不仅是一个假的错误码。此外， `-1` 也表示无效的系统调用号，使得系统调用重启逻辑不会被触发。But it is not only fake error-code. Moreover the `-1` also represents invalid system call number, so that the system call restart logic will not be triggered.
 
-`idtentry` 宏的最后两个参数 `shift_ist` 和 `paranoid` 使我们知道一个异常处理程序是否从`中断堆栈表`运行栈。你已经知道系统中的每个内核线程都有自己的栈。除了这些栈外，还有一些与每个处理器相关的专门的栈。这些栈其中之一是 - 异常栈。[x86_64](https://en.wikipedia.org/wiki/X86-64) 架构提供了特殊的特性，称之为`中断堆栈表`。这个特性允许切换到指定事件的新栈，例如像`双重错误`这样的原子异常等等。因此 `shift_ist` 参数允许我们知道是否需要为一个异常处理函数切换到 `IST` 栈。The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
+`idtentry` 宏的最后两个参数 `shift_ist` 和 `paranoid` 使我们知道一个异常处理程序是否从`中断堆栈表`运行栈。你已经知道系统中的每个内核线程都有自己的栈。除了这些栈外，还有一些与每个处理器相关的专门的栈。这些栈其中之一是 - 异常栈。[x86_64](https://en.wikipedia.org/wiki/X86-64) 架构提供了特殊的特性，称之为`中断堆栈表`。这个特性允许为制定事件切换到新栈，例如像`双重错误`这样的原子异常等等。因此 `shift_ist` 参数允许我们知道是否需要为一个异常处理函数切换到 `IST` 栈。The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
 
 第二个参数 - `paranoid` 定义了有助于我们知道来自用户态还是异常处理程序的方法。确定这一点的最简单的方法是通过 `CS` 段寄存器中的 `CPL`，即`当前特权级别`：如果它等于 `3`，我们来自用户态，如果是 `0`，则是来自内核态：The second parameter - `paranoid` defines the method which helps us to know did we come from userspace or not to an exception handler. The easiest way to determine this is to via `CPL` or `Current Privilege Level` in `CS` segment register. If it is equal to `3`, we came from userspace, if zero we came from kernel space:
 
@@ -206,11 +206,11 @@ jnz userspace
 // we are from the kernel space
 ```
 
-但不幸的是，这种方法不能给予 100% 的保证。内个文档中这样描述：But unfortunately this method does not give a 100% guarantee. As described in the kernel documentation:
+但不幸的是，这种方法不能给予 100% 的保证。内核文档中这样描述：But unfortunately this method does not give a 100% guarantee. As described in the kernel documentation:
 
 > 如果我们处在一个NMI/MCE/DEBUG/ 任何超原子入口上下文中，if we are in an NMI/MCE/DEBUG/whatever super-atomic entry context,
 > 那将会在一个普通项将 CS 写入栈之后which might have triggered right after a normal entry wrote CS to the
-> 但是在我们执行 SWAPGS 之后触发，那么检查 GS 唯一安全的方法则是：RDMSR，stack but before we executed SWAPGS, then the only safe way to check
+> 但是在我们执行 SWAPGS 之前触发，那么检查 GS 唯一安全的方法则是：RDMSR，stack but before we executed SWAPGS, then the only safe way to check
 > 这个方法比较慢for GS is the slower method: the RDMSR.
 
 换句话说，比如 `NMI`，可能发生在 [swapgs](http://www.felixcloutier.com/x86/SWAPGS.html) 指令的临界区内。使用这种方法，我们应检查 `MSR_GS_BASE` [MSR 寄存器](https://en.wikipedia.org/wiki/Model-specific_register) 的值，该寄存器保存了指向 per-cpu 区域起始（地址）的指针。因此要检查我们是否来自用户态，我们应该检查 `MSR_GS_BASE` MSR 寄存器的值，如果它为负，我们来自内核态，否则来自用户态：In other words for example `NMI` could happen inside the critical section of a [swapgs](http://www.felixcloutier.com/x86/SWAPGS.html) instruction. In this way we should check value of the `MSR_GS_BASE` [model specific register](https://en.wikipedia.org/wiki/Model-specific_register) which stores pointer to the start of per-cpu area. So to check did we come from userspace or not, we should to check value of the `MSR_GS_BASE` model specific register and if it is negative we came from kernel space, in other way we came from userspace:
@@ -230,7 +230,7 @@ js 1f
 ALLOC_PT_GPREGS_ON_STACK
 ```
 
-该宏定义在 [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中。这个红光只是分配 15*8 字节空间来保存通用寄存器：macro which is defined in the [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file. This macro just allocates 15*8 bytes space on the stack to preserve general purpose registers:
+该宏定义在 [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中。这个宏只是分配 15*8 字节空间来保存通用寄存器：macro which is defined in the [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file. This macro just allocates 15*8 bytes space on the stack to preserve general purpose registers:
 
 ```assembly
 .macro ALLOC_PT_GPREGS_ON_STACK addskip=0
