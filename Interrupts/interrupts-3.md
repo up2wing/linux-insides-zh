@@ -149,7 +149,7 @@ idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 最后两个参数是可选的：The last two parameters are optional:
 
 * `paranoid` - 显示我们需要如何检测当前模式（稍后会详细解释）；shows us how we need to check current mode (will see explanation in details later);
-* `shift_ist` - 显示异常运行在`中断堆栈表`。shows us is an exception running at `Interrupt Stack Table`.
+* `shift_ist` - 显示异常运行在`中断栈表`。shows us is an exception running at `Interrupt Stack Table`.
 
 `.idtentry` 宏的定义为：Definition of the `.idtentry` macro looks:
 
@@ -193,7 +193,7 @@ idtentry int3 do_int3 has_error_code=0 paranoid=1 shift_ist=DEBUG_STACK
 
 但它不仅是一个假的错误码。此外， `-1` 也表示无效的系统调用号，使得系统调用重启逻辑不会被触发。But it is not only fake error-code. Moreover the `-1` also represents invalid system call number, so that the system call restart logic will not be triggered.
 
-`idtentry` 宏的最后两个参数 `shift_ist` 和 `paranoid` 使我们知道一个异常处理程序是否从`中断堆栈表`运行栈。你已经知道系统中的每个内核线程都有自己的栈。除了这些栈外，还有一些与每个处理器相关的专门的栈。这些栈其中之一是 - 异常栈。[x86_64](https://en.wikipedia.org/wiki/X86-64) 架构提供了特殊的特性，称之为`中断堆栈表`。这个特性允许为制定事件切换到新栈，例如像`双重错误`这样的原子异常等等。因此 `shift_ist` 参数允许我们知道是否需要为一个异常处理函数切换到 `IST` 栈。The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
+`idtentry` 宏的最后两个参数 `shift_ist` 和 `paranoid` 使我们知道一个异常处理程序是否从`中断栈表`运行栈。你已经知道系统中的每个内核线程都有自己的栈。除了这些栈外，还有一些与每个处理器相关的专门的栈。这些栈其中之一是 - 异常栈。[x86_64](https://en.wikipedia.org/wiki/X86-64) 架构提供了特殊的特性，称之为`中断栈表`。这个特性允许为制定事件切换到新栈，例如像`双重错误`这样的原子异常等等。因此 `shift_ist` 参数允许我们知道是否需要为一个异常处理函数切换到 `IST` 栈。The last two parameters of the `idtentry` macro `shift_ist` and `paranoid` allow to know do an exception handler runned at stack from `Interrupt Stack Table` or not. You already may know that each kernel thread in the system has own stack. In addition to these stacks, there are some specialized stacks associated with each processor in the system. One of these stacks is - exception stack. The [x86_64](https://en.wikipedia.org/wiki/X86-64) architecture provides special feature which is called - `Interrupt Stack Table`. This feature allows to switch to a new stack for designated events such as an atomic exceptions like `double fault` and etc. So the `shift_ist` parameter allows us to know do we need to switch on `IST` stack for an exception handler or not.
 
 第二个参数 - `paranoid` 定义了有助于我们知道来自用户态还是异常处理程序的方法。确定这一点的最简单的方法是通过 `CS` 段寄存器中的 `CPL`，即`当前特权级别`：如果它等于 `3`，我们来自用户态，如果是 `0`，则是来自内核态：The second parameter - `paranoid` defines the method which helps us to know did we come from userspace or not to an exception handler. The easiest way to determine this is to via `CPL` or `Current Privilege Level` in `CS` segment register. If it is equal to `3`, we came from userspace, if zero we came from kernel space:
 
