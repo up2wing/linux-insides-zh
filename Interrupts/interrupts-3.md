@@ -301,7 +301,7 @@ SAVE_C_REGS 8
 SAVE_EXTRA_REGS 8
 ```
 
-这两个红光都定义在  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中，只是将通用寄存器的值移动到栈中的某个位置，如：These both macros are defined in the  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file and just move values of general purpose registers to a certain place at the stack, for example:
+这两个宏都定义在  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) 头文件中，只是将通用寄存器的值移动到栈中的某个位置，如：These both macros are defined in the  [arch/x86/entry/calling.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/calling.h) header file and just move values of general purpose registers to a certain place at the stack, for example:
 
 ```assembly
 .macro SAVE_EXTRA_REGS offset=0
@@ -343,7 +343,7 @@ SAVE_EXTRA_REGS 8
      +------------+
 ```
 
-在内核在栈中保存了通用寄存器后，我们应该再次检查我们是来自用户空间的：After the kernel saved general purpose registers at the stack, we should check that we came from userspace space again with:
+内核在栈上保存了通用寄存器后，我们应该再次检查我们是来自用户空间的：After the kernel saved general purpose registers at the stack, we should check that we came from userspace space again with:
 
 ```assembly
 testb	$3, CS+8(%rsp)
@@ -359,7 +359,7 @@ movq	%rsp, %rdi
 call	sync_regs
 ```
 
-Here we put base address of stack pointer `%rdi` register which will be first argument (according to [x86_64 ABI](https://www.uclibc.org/docs/psABI-x86_64.pdf)) of the `sync_regs` function and call this function which is defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) source code file:
+这里我们把栈指针的基地址放入 `%rdi` 寄存器，作为 `sync_regs` 函数的第一个参数（根据 [x86_64 ABI](https://www.uclibc.org/docs/psABI-x86_64.pdf)），并调用定义在源码文件 [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) 中的这个函数：Here we put base address of stack pointer `%rdi` register which will be first argument (according to [x86_64 ABI](https://www.uclibc.org/docs/psABI-x86_64.pdf)) of the `sync_regs` function and call this function which is defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/traps.c) source code file:
 
 ```C
 asmlinkage __visible notrace struct pt_regs *sync_regs(struct pt_regs *eregs)
@@ -370,29 +370,29 @@ asmlinkage __visible notrace struct pt_regs *sync_regs(struct pt_regs *eregs)
 }
 ```
 
-This function takes the result of the `task_ptr_regs` macro which is defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) header file, stores it in the stack pointer and return it. The `task_ptr_regs` macro expands to the address of `thread.sp0` which represents pointer to the normal kernel stack:
+这个函数采用了 `task_ptr_regs` 宏的结果，该宏定义在 [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) 头文件中，保存该结果到栈指针，并将其返回。`task_ptr_regs` 宏展开为 `thread.sp0` 的地址，它表示正常内核栈的指针：This function takes the result of the `task_ptr_regs` macro which is defined in the [arch/x86/include/asm/processor.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/include/asm/processor.h) header file, stores it in the stack pointer and return it. The `task_ptr_regs` macro expands to the address of `thread.sp0` which represents pointer to the normal kernel stack:
 
 ```C
 #define task_pt_regs(tsk)       ((struct pt_regs *)(tsk)->thread.sp0 - 1)
 ```
 
-As we came from userspace, this means that exception handler will run in real process context. After we got stack pointer from the `sync_regs` we switch stack:
+因为我们来自用户空间，这意味着异常处理程序将在实际的进程上下文中运行。从 `sync_regs` 中获得栈指针后，我们切换栈：As we came from userspace, this means that exception handler will run in real process context. After we got stack pointer from the `sync_regs` we switch stack:
 
 ```assembly
 movq	%rax, %rsp
 ```
 
-The last two steps before an exception handler will call secondary handler are:
+异常处理程序之前的最后两步，是调用辅助处理函数：The last two steps before an exception handler will call secondary handler are:
 
-1. Passing pointer to `pt_regs` structure which contains preserved general purpose registers to the `%rdi` register:
+1. 将 `pt_regs` 结构体指针（包含保存的通用寄存器）放入 `%rdi` 寄存器，1. Passing pointer to `pt_regs` structure which contains preserved general purpose registers to the `%rdi` register:
 
 ```assembly
 movq	%rsp, %rdi
 ```
 
-as it will be passed as first parameter of secondary exception handler.
+因为它将作为辅助异常处理函数的第一个参数。as it will be passed as first parameter of secondary exception handler.
 
-2. Pass error code to the `%rsi` register as it will be second argument of an exception handler and set it to `-1` on the stack for the same purpose as we did it before - to prevent restart of a system call:
+2. 将错误码传给 `%rsi` 寄存器，因为它将作为辅助异常处理函数的第二个参数，并在栈上将其设置为 `-1`，以达到与之前相同的目的 - 防止重新启动系统调用：2. Pass error code to the `%rsi` register as it will be second argument of an exception handler and set it to `-1` on the stack for the same purpose as we did it before - to prevent restart of a system call:
 
 ```
 .if \has_error_code
@@ -403,29 +403,29 @@ as it will be passed as first parameter of secondary exception handler.
 .endif
 ```
 
-Additionally you may see that we zeroed the `%esi` register above in a case if an exception does not provide error code. 
+另外，如果异常不提供错误码，你可以看到在上面的例子中，我们将 `%esi` 寄存器置零。Additionally you may see that we zeroed the `%esi` register above in a case if an exception does not provide error code. 
 
-In the end we just call secondary exception handler:
+最后我们只需调用辅助异常处理函数：In the end we just call secondary exception handler:
 
 ```assembly
 call	\do_sym
 ```
 
-which:
+其中：which:
 
 ```C
 dotraplinkage void do_debug(struct pt_regs *regs, long error_code);
 ```
 
-will be for `debug` exception and:
+将用于 `debug` 异常：will be for `debug` exception and:
 
 ```C
 dotraplinkage void notrace do_int3(struct pt_regs *regs, long error_code);
 ```
 
-will be for `int 3` exception. In this part we will not see implementations of secondary handlers, because of they are very specific, but will see some of them in one of next parts.
+将用于 `int 3` 异常。在本部分我们不会看到辅助处理函数的实现，因为它们是非常具体的，我们将在下面的某一部分看到它们。will be for `int 3` exception. In this part we will not see implementations of secondary handlers, because of they are very specific, but will see some of them in one of next parts.
 
-We just considered first case when an exception occurred in userspace. Let's consider last two.
+我们只研究了当异常发生在用户空间的第一种情形。让我们来考虑最后两个。We just considered first case when an exception occurred in userspace. Let's consider last two.
 
 An exception with paranoid > 0 occurred in kernelspace
 --------------------------------------------------------------------------------
