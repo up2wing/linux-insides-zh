@@ -427,10 +427,10 @@ dotraplinkage void notrace do_int3(struct pt_regs *regs, long error_code);
 
 我们只研究了当异常发生在用户空间的第一种情形。让我们来考虑最后两个。We just considered first case when an exception occurred in userspace. Let's consider last two.
 
-An exception with paranoid > 0 occurred in kernelspace
+发生在内核空间中的 paranoid > 0 的异常An exception with paranoid > 0 occurred in kernelspace
 --------------------------------------------------------------------------------
 
-In this case an exception was occurred in kernelspace and `idtentry` macro is defined with `paranoid=1` for this exception. This value of `paranoid` means that we should use slower way that we saw in the beginning of this part to check do we really came from kernelspace or not. The `paranoid_entry` routing allows us to know this:
+在这种情况下，异常发生在内核空间，`idtentry` 宏被定义为 `paranoid=1`。`paranoid` 的这个值意味着我们应该使用在本部分开始我们看到的较慢的方式，来检查我们是否确认来自内核空间。`paranoid_entry` 例程允许我们知道这点：In this case an exception was occurred in kernelspace and `idtentry` macro is defined with `paranoid=1` for this exception. This value of `paranoid` means that we should use slower way that we saw in the beginning of this part to check do we really came from kernelspace or not. The `paranoid_entry` routing allows us to know this:
 
 ```assembly
 ENTRY(paranoid_entry)
@@ -448,7 +448,7 @@ ENTRY(paranoid_entry)
 END(paranoid_entry)
 ```
 
-As you may see, this function represents the same that we covered before. We use second (slow) method to get information about previous state of an interrupted task. As we checked this and executed `SWAPGS` in a case if we came from userspace, we should to do the same that we did before: We need to put pointer to a structure which holds general purpose registers to the `%rdi` (which will be first parameter of a secondary handler) and put error code if an exception provides it to the `%rsi` (which will be second parameter of a secondary handler):
+如你所见，这个函数表示的和我们之前介绍的相同。我们使用第二种（慢速）方法来获取关于中断任务之前状态的信息。As you may see, this function represents the same that we covered before. We use second (slow) method to get information about previous state of an interrupted task. As we checked this and executed `SWAPGS` in a case if we came from userspace, we should to do the same that we did before: We need to put pointer to a structure which holds general purpose registers to the `%rdi` (which will be first parameter of a secondary handler) and put error code if an exception provides it to the `%rsi` (which will be second parameter of a secondary handler):
 
 ```assembly
 movq	%rsp, %rdi
