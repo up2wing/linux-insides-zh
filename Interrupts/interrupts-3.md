@@ -448,7 +448,7 @@ ENTRY(paranoid_entry)
 END(paranoid_entry)
 ```
 
-如你所见，这个函数表示的和我们之前介绍的相同。我们使用第二种（慢速）方法来获取关于中断任务之前状态的信息。As you may see, this function represents the same that we covered before. We use second (slow) method to get information about previous state of an interrupted task. As we checked this and executed `SWAPGS` in a case if we came from userspace, we should to do the same that we did before: We need to put pointer to a structure which holds general purpose registers to the `%rdi` (which will be first parameter of a secondary handler) and put error code if an exception provides it to the `%rsi` (which will be second parameter of a secondary handler):
+如你所见，这个函数表示的和我们之前介绍的相同。我们使用第二种（慢速）方法来获取关于中断任务之前状态的信息。当我们检查这个，并在来自用户空间的情况下执行 `SWAPGS` 时，我们要做的应该和以前一样：我们需要把一个指向通用寄存器的结构指针放入 `%rdi`（辅助处理函数的第一个参数），如果异常提供了错误码，就将其放入 `%rsi`（辅助处理函数的第二个参数）：As you may see, this function represents the same that we covered before. We use second (slow) method to get information about previous state of an interrupted task. As we checked this and executed `SWAPGS` in a case if we came from userspace, we should to do the same that we did before: We need to put pointer to a structure which holds general purpose registers to the `%rdi` (which will be first parameter of a secondary handler) and put error code if an exception provides it to the `%rsi` (which will be second parameter of a secondary handler):
 
 ```assembly
 movq	%rsp, %rdi
@@ -461,7 +461,7 @@ movq	%rsp, %rdi
 .endif
 ```
 
-The last step before a secondary handler of an exception will be called is cleanup of new `IST` stack fram:
+调用异常的辅助处理函数之前的最后一步是清理新 `IST` 栈fram：The last step before a secondary handler of an exception will be called is cleanup of new `IST` stack fram:
 
 ```assembly
 .if \shift_ist != -1
@@ -469,39 +469,39 @@ The last step before a secondary handler of an exception will be called is clean
 .endif
 ```
 
-You may remember that we passed the `shift_ist` as argument of the `idtentry` macro. Here we check its value and if its not equal to `-1`, we get pointer to a stack from `Interrupt Stack Table` by `shift_ist` index and setup it.
+你可能还记得我们传递了 `shift_ist` 参数给 `idtentry` 宏。这里我们检查它的值，如果它不等于 `-1`，我们通过 `shift_ist` 索引从`中断栈表`得到指向栈的指针，并设置它。You may remember that we passed the `shift_ist` as argument of the `idtentry` macro. Here we check its value and if its not equal to `-1`, we get pointer to a stack from `Interrupt Stack Table` by `shift_ist` index and setup it.
 
-In the end of this second way we just call secondary exception handler as we did it before:
+在第二种方法的最后，像之前一样，我们只是调用辅助异常处理函数：In the end of this second way we just call secondary exception handler as we did it before:
 
 ```assembly
 call	\do_sym
 ```
 
-The last method is similar to previous both, but an exception occured with `paranoid=0` and we may use fast method determination of where we are from.
+最后一种方法与前面的两种类似，但是在 `paranoid=0` 的情况下发生了异常，我们可以使用快速方法确定我们来自哪儿。The last method is similar to previous both, but an exception occured with `paranoid=0` and we may use fast method determination of where we are from.
 
-Exit from an exception handler
+从异常处理中退出Exit from an exception handler
 --------------------------------------------------------------------------------
 
-After secondary handler will finish its works, we will return to the `idtentry` macro and the next step will be jump to the `error_exit`:
+辅助处理程序完成其工作以后，我们会返回到 `idtentry` 宏，下一步将是跳转到 `error_exit`例程：After secondary handler will finish its works, we will return to the `idtentry` macro and the next step will be jump to the `error_exit`:
 
 ```assembly
 jmp	error_exit
 ```
 
-routine. The `error_exit` function defined in the same [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) assembly source code file and the main goal of this function is to know where we are from (from userspace or kernelspace) and execute `SWPAGS` depends on this. Restore registers to previous state and execute `iret` instruction to transfer control to an interrupted task.
+`error_exit` 函数定义在相同的 [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) 汇编源文件中，其主要目的是知道我们来自哪儿（用户空间或内核空间），并执行依赖于此的 `SWPAGS`。恢复寄存器到之前的状态，并执行 `iret` 指令将控制权交给中断任务。routine. The `error_exit` function defined in the same [arch/x86/entry/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/entry/entry_64.S) assembly source code file and the main goal of this function is to know where we are from (from userspace or kernelspace) and execute `SWPAGS` depends on this. Restore registers to previous state and execute `iret` instruction to transfer control to an interrupted task.
 
-That's all.
+就这么多了。That's all.
 
 Conclusion
 --------------------------------------------------------------------------------
 
-It is the end of the third part about interrupts and interrupt handling in the Linux kernel. We saw the initialization of the [Interrupt descriptor table](https://en.wikipedia.org/wiki/Interrupt_descriptor_table) in the previous part with the `#DB` and `#BP` gates and started to dive into preparation before control will be transferred to an exception handler and implementation of some interrupt handlers in this part. In the next part we will continue to dive into this theme and will go next by the `setup_arch` function and will try to understand interrupts handling related stuff.
+这是有关 Linux 内核中断和中断处理第三部分的结尾了。在前面的部分我们用 `#DB` 和 `#BP` 门看了[中断描述符表](https://en.wikipedia.org/wiki/Interrupt_descriptor_table) 的初始化，并开始研究了在控制权转交给异常处理程序之前的准备工作，已经本部分的一些异常处理程序。在下一部分中，我们将继续深入探讨这一主题，接下来是 `setup_arch` 函数，并尝试理解中断处理相关内容。It is the end of the third part about interrupts and interrupt handling in the Linux kernel. We saw the initialization of the [Interrupt descriptor table](https://en.wikipedia.org/wiki/Interrupt_descriptor_table) in the previous part with the `#DB` and `#BP` gates and started to dive into preparation before control will be transferred to an exception handler and implementation of some interrupt handlers in this part. In the next part we will continue to dive into this theme and will go next by the `setup_arch` function and will try to understand interrupts handling related stuff.
 
 If you have any questions or suggestions write me a comment or ping me at [twitter](https://twitter.com/0xAX).
 
 **Please note that English is not my first language, And I am really sorry for any inconvenience. If you find any mistakes please send me PR to [linux-insides](https://github.com/0xAX/linux-insides).**
 
-Links
+链接Links
 --------------------------------------------------------------------------------
 
 * [Debug registers](http://en.wikipedia.org/wiki/X86_debug_register)
