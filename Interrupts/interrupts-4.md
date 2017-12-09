@@ -1,15 +1,15 @@
-Interrupts and Interrupt Handling. Part 4.
+中断和中断处理 Part 4.Interrupts and Interrupt Handling. Part 4.
 ================================================================================
 
-Initialization of non-early interrupt gates
+非早期中断门的初始化Initialization of non-early interrupt gates
 --------------------------------------------------------------------------------
 
-This is fourth part about an interrupts and exceptions handling in the Linux kernel and in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) we saw first early `#DB` and `#BP` exceptions handlers from the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). We stopped on the right after the `early_trap_init` function that called in the `setup_arch` function which defined in the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/setup.c). In this part we will continue to dive into an interrupts and exceptions handling in the Linux kernel for `x86_64` and continue to do it from the place where we left off in the last part. First thing which is related to the interrupts and exceptions handling is the setup of the `#PF` or [page fault](https://en.wikipedia.org/wiki/Page_fault) handler with the `early_trap_pf_init` function. Let's start from it.
+这是 Linux 内核中关于中断和异常的第四部分，在[上一部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) 我们看到了 [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c) 中的第一个早期 `#DB` 和 `#BP` 异常处理程序。我们停在了调用 `early_trap_init` 函数之后，该函数是在 [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/setup.c) 中的 `setup_arch` 函数中调用的。在本部分，我们将继续深入分析 Linux 内核 `x86_64` 的中断和异常处理，并继续从上一部分我们离开的地方开始。与中断和异常处理相关的第一件事是用 `early_trap_pf_init` 函数设置 `#PF`，即[page fault](https://en.wikipedia.org/wiki/Page_fault) 处理程序。让我们从它开始。This is fourth part about an interrupts and exceptions handling in the Linux kernel and in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) we saw first early `#DB` and `#BP` exceptions handlers from the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). We stopped on the right after the `early_trap_init` function that called in the `setup_arch` function which defined in the [arch/x86/kernel/setup.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/setup.c). In this part we will continue to dive into an interrupts and exceptions handling in the Linux kernel for `x86_64` and continue to do it from the place where we left off in the last part. First thing which is related to the interrupts and exceptions handling is the setup of the `#PF` or [page fault](https://en.wikipedia.org/wiki/Page_fault) handler with the `early_trap_pf_init` function. Let's start from it.
 
-Early page fault handler
+早期页面错误处理程序Early page fault handler
 --------------------------------------------------------------------------------
 
-The `early_trap_pf_init` function defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). It uses `set_intr_gate` macro that fills [Interrupt Descriptor Table](https://en.wikipedia.org/wiki/Interrupt_descriptor_table) with the given entry:
+`early_trap_pf_init` 函数定义在 [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c)。它使用 `set_intr_gate` 宏来用给定条目填充[中断描述符表](https://en.wikipedia.org/wiki/Interrupt_descriptor_table)：The `early_trap_pf_init` function defined in the [arch/x86/kernel/traps.c](https://github.com/torvalds/linux/tree/master/arch/x86/kernel/traps.c). It uses `set_intr_gate` macro that fills [Interrupt Descriptor Table](https://en.wikipedia.org/wiki/Interrupt_descriptor_table) with the given entry:
 
 ```C
 void __init early_trap_pf_init(void)
@@ -20,7 +20,7 @@ void __init early_trap_pf_init(void)
 }
 ```
 
-This macro defined in the [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/desc.h). We already saw macros like this in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) - `set_system_intr_gate` and `set_intr_gate_ist`. This macro checks that given vector number is not greater than `255` (maximum vector number) and calls `_set_gate` function as `set_system_intr_gate` and `set_intr_gate_ist` did it:
+这个宏定义在 [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/desc.h)。在前面的[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html)我们也可以看到像这样的宏 - `set_system_intr_gate` 和 `set_intr_gate_ist`。这个宏检查给定的向量号不大于 `255` （最大向量号），并像 `set_system_intr_gate` 和 `set_intr_gate_ist` 一样调用 `_set_gate` 函数：This macro defined in the [arch/x86/include/asm/desc.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/desc.h). We already saw macros like this in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) - `set_system_intr_gate` and `set_intr_gate_ist`. This macro checks that given vector number is not greater than `255` (maximum vector number) and calls `_set_gate` function as `set_system_intr_gate` and `set_intr_gate_ist` did it:
 
 ```C
 #define set_intr_gate(n, addr)                                  \
@@ -33,17 +33,17 @@ do {                                                            \
 } while (0)
 ```
 
-The `set_intr_gate` macro takes two parameters:
+`set_intr_gate` 宏有两个参数：The `set_intr_gate` macro takes two parameters:
 
-* vector number of a interrupt;
-* address of an interrupt handler;
+* 中断的向量号；vector number of a interrupt;
+* 中断处理程序的地址；address of an interrupt handler;
 
-In our case they are:
+在我们的例子中，分别是：In our case they are:
 
 * `X86_TRAP_PF` - `14`;
-* `page_fault` - the interrupt handler entry point.
+* `page_fault` - 中断处理程序入口点。the interrupt handler entry point.
 
-The `X86_TRAP_PF` is the element of enum which defined in the [arch/x86/include/asm/traprs.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traprs.h):
+`X86_TRAP_PF` 是定义在 [arch/x86/include/asm/traprs.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traprs.h) 中的枚举成员：The `X86_TRAP_PF` is the element of enum which defined in the [arch/x86/include/asm/traprs.h](https://github.com/torvalds/linux/tree/master/arch/x86/include/asm/traprs.h):
 
 ```C
 enum {
@@ -58,13 +58,13 @@ enum {
 }
 ```
 
-When the `early_trap_pf_init` will be called, the `set_intr_gate` will be expanded to the call of the `_set_gate` which will fill the `IDT` with the handler for the page fault. Now let's look on the implementation of the `page_fault` handler. The `page_fault` handler defined in the [arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) assembly source code file as all exceptions handlers. Let's look on it:
+当调用 `early_trap_pf_init` 时，`set_intr_gate` 会被扩展为 `_set_gate` 的调用，用页面错误的处理程序填充 `IDT`。现在让我们来看下 `page_fault` 处理程序的实现。和所有异常处理程序一样，`page_fault` 处理程序定义在[arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) 汇编源文件中。我们来看看：When the `early_trap_pf_init` will be called, the `set_intr_gate` will be expanded to the call of the `_set_gate` which will fill the `IDT` with the handler for the page fault. Now let's look on the implementation of the `page_fault` handler. The `page_fault` handler defined in the [arch/x86/kernel/entry_64.S](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/kernel/entry_64.S) assembly source code file as all exceptions handlers. Let's look on it:
 
 ```assembly
 trace_idtentry page_fault do_page_fault has_error_code=1
 ```
 
-We saw in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) how `#DB` and `#BP` handlers defined. They were defined with the `idtentry` macro, but here we can see `trace_idtentry`. This macro defined in the same source code file and depends on the `CONFIG_TRACING` kernel configuration option:
+在前面的[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) 我们看到了 `#DB` and `#BP` 处理程序是如何定义的。它们是用 `idtentry` 宏定义的，但这里我们看到是 `trace_idtentry`。这个宏定义在相同的源文件，并依赖于 `CONFIG_TRACING` 内核配置选项：We saw in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) how `#DB` and `#BP` handlers defined. They were defined with the `idtentry` macro, but here we can see `trace_idtentry`. This macro defined in the same source code file and depends on the `CONFIG_TRACING` kernel configuration option:
 
 ```assembly
 #ifdef CONFIG_TRACING
