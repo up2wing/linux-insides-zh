@@ -79,14 +79,14 @@ idtentry \sym \do_sym has_error_code=\has_error_code
 #endif
 ```
 
-We will not dive into exceptions [Tracing](https://en.wikipedia.org/wiki/Tracing_%28software%29) now. If `CONFIG_TRACING` is not set, we can see that `trace_idtentry` macro just expands to the normal `idtentry`. We already saw implementation of the `idtentry` macro in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html), so let's start from the `page_fault` exception handler.
+现在我们不会深入分析 [Tracing](https://en.wikipedia.org/wiki/Tracing_%28software%29) 异常。如果 `CONFIG_TRACING` 没有设置，我们可以看到 `trace_idtentry` 宏只是扩展为普通的 `idtentry`。我们已经在前面的[部分](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html) 看到了 `idtentry` 宏的实现，所以让我们从 `page_fault` 异常处理程序开始。We will not dive into exceptions [Tracing](https://en.wikipedia.org/wiki/Tracing_%28software%29) now. If `CONFIG_TRACING` is not set, we can see that `trace_idtentry` macro just expands to the normal `idtentry`. We already saw implementation of the `idtentry` macro in the previous [part](http://0xax.gitbooks.io/linux-insides/content/interrupts/interrupts-3.html), so let's start from the `page_fault` exception handler.
 
-As we can see in the `idtentry` definition, the handler of the `page_fault` is `do_page_fault` function which defined in the [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c) and as all exceptions handlers it takes two arguments:
+如我们在 `idtentry` 定义所见， `page_fault` 的处理程序是定义在 [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c) 中的 `do_page_fault` 函数，并且如同所有的异常处理程序，它有两个参数：As we can see in the `idtentry` definition, the handler of the `page_fault` is `do_page_fault` function which defined in the [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c) and as all exceptions handlers it takes two arguments:
 
-* `regs` - `pt_regs` structure that holds state of an interrupted process;
-* `error_code` - error code of the page fault exception.
+* `regs` - 保存中断进程状态的 `pt_regs` 结构；`pt_regs` structure that holds state of an interrupted process;
+* `error_code` - 页面错误异常的错误码。error code of the page fault exception.
 
-Let's look inside this function. First of all we read content of the [cr2](https://en.wikipedia.org/wiki/Control_register) control register:
+让我们来看看这个函数。首先我们读取 [cr2](https://en.wikipedia.org/wiki/Control_register) 控制寄存器的内容：Let's look inside this function. First of all we read content of the [cr2](https://en.wikipedia.org/wiki/Control_register) control register:
 
 ```C
 dotraplinkage void notrace
@@ -99,7 +99,7 @@ do_page_fault(struct pt_regs *regs, unsigned long error_code)
 }
 ```
 
-This register contains a linear address which caused `page fault`. In the next step we make a call of the `exception_enter` function from the [include/linux/context_tracking.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/context_tracking.h). The `exception_enter` and `exception_exit` are functions from context tracking subsystem in the Linux kernel used by the [RCU](https://en.wikipedia.org/wiki/Read-copy-update) to remove its dependency on the timer tick while a processor runs in userspace. Almost in the every exception handler we will see similar code:
+该寄存器包含了导致 `page fault` 的线性地址。下一步，我们调用了 [include/linux/context_tracking.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/context_tracking.h) 中的 `exception_enter` 函数。`exception_enter` and `exception_exit` 是 Linux 内核中的上下文跟踪子系统，[RCU](https://en.wikipedia.org/wiki/Read-copy-update) 用它来移除当处理器运行在用户空间时对定时器滴答的依赖。几乎在每个异常处理程序中我们都能看到类似的代码：This register contains a linear address which caused `page fault`. In the next step we make a call of the `exception_enter` function from the [include/linux/context_tracking.h](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/include/context_tracking.h). The `exception_enter` and `exception_exit` are functions from context tracking subsystem in the Linux kernel used by the [RCU](https://en.wikipedia.org/wiki/Read-copy-update) to remove its dependency on the timer tick while a processor runs in userspace. Almost in the every exception handler we will see similar code:
 
 ```C
 enum ctx_state prev_state;
@@ -110,7 +110,7 @@ prev_state = exception_enter();
 exception_exit(prev_state);
 ```
 
-The `exception_enter` function checks that `context tracking` is enabled with the `context_tracking_is_enabled` and if it is in enabled state, we get previous context with the `this_cpu_read` (more about `this_cpu_*` operations you can read in the [Documentation](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt)). After this it calls `context_tracking_user_exit` function which informs the context tracking that the processor is exiting userspace mode and entering the kernel:
+`exception_enter` 函数使用 `context_tracking_is_enabled` 检查 `context tracking` 是否使能，如果它处于使能状态，则使用 `this_cpu_read` （更多关于 `this_cpu_*` 的操作可以阅读[文档](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt)）获取之前的上下文。然后调用 `context_tracking_user_exit` 函数通知上下文跟踪处理器正退出用户空间模式并进入内核：The `exception_enter` function checks that `context tracking` is enabled with the `context_tracking_is_enabled` and if it is in enabled state, we get previous context with the `this_cpu_read` (more about `this_cpu_*` operations you can read in the [Documentation](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/Documentation/this_cpu_ops.txt)). After this it calls `context_tracking_user_exit` function which informs the context tracking that the processor is exiting userspace mode and entering the kernel:
 
 ```C
 static inline enum ctx_state exception_enter(void)
@@ -127,7 +127,7 @@ static inline enum ctx_state exception_enter(void)
 }
 ```
 
-The state can be one of the:
+状态可以是其中之一：The state can be one of the:
 
 ```C
 enum ctx_state {
@@ -136,13 +136,13 @@ enum ctx_state {
 } state;
 ```
 
-And in the end we return previous context. Between the `exception_enter` and `exception_exit` we call actual page fault handler:
+最后我们返回前一上下文（的状态）。在 `exception_enter` 和 `exception_exit` 之间我们调用实际的页面错误处理程序：And in the end we return previous context. Between the `exception_enter` and `exception_exit` we call actual page fault handler:
 
 ```C
 __do_page_fault(regs, error_code, address);
 ```
 
-The `__do_page_fault` is defined in the same source code file as `do_page_fault` - [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c). In the beginning of the `__do_page_fault` we check state of the [kmemcheck](https://www.kernel.org/doc/Documentation/kmemcheck.txt) checker. The `kmemcheck` detects warns about some uses of uninitialized memory. We need to check it because page fault can be caused by kmemcheck:
+`__do_page_fault` 定义在和 `do_page_fault` 一样的源文件 - [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c)。在 `__do_page_fault` 的开始，我们检查 [kmemcheck](https://www.kernel.org/doc/Documentation/kmemcheck.txt) 检查器的状态。`kmemcheck` 探测有关使用未初始化内存的警告。我们需要检查它，因为页面错误可能是 kmemcheck 导致的：The `__do_page_fault` is defined in the same source code file as `do_page_fault` - [arch/x86/mm/fault.c](https://github.com/torvalds/linux/blob/16f73eb02d7e1765ccab3d2018e0bd98eb93d973/arch/x86/mm/fault.c). In the beginning of the `__do_page_fault` we check state of the [kmemcheck](https://www.kernel.org/doc/Documentation/kmemcheck.txt) checker. The `kmemcheck` detects warns about some uses of uninitialized memory. We need to check it because page fault can be caused by kmemcheck:
 
 ```C
 if (kmemcheck_active(regs))
@@ -150,7 +150,7 @@ if (kmemcheck_active(regs))
 	prefetchw(&mm->mmap_sem);
 ```
 
-After this we can see the call of the `prefetchw` which executes instruction with the same [name](http://www.felixcloutier.com/x86/PREFETCHW.html) which fetches [X86_FEATURE_3DNOW](https://en.wikipedia.org/?title=3DNow!) to get exclusive [cache line](https://en.wikipedia.org/wiki/CPU_cache). The main purpose of prefetching is to hide the latency of a memory access. In the next step we check that we got page fault not in the kernel space with the following condition:
+然后我们可以看到调用了 `prefetchw`，其执行了具有相同[名字](http://www.felixcloutier.com/x86/PREFETCHW.html)的指令，该指令获取 [X86_FEATURE_3DNOW](https://en.wikipedia.org/?title=3DNow!) 来得到排他的[缓存行](https://en.wikipedia.org/wiki/CPU_cache)。预取的主要目的是隐藏内存访问的延迟。下一步，我们用如下条件来判断我们是否在内核空间得到了页面错误：After this we can see the call of the `prefetchw` which executes instruction with the same [name](http://www.felixcloutier.com/x86/PREFETCHW.html) which fetches [X86_FEATURE_3DNOW](https://en.wikipedia.org/?title=3DNow!) to get exclusive [cache line](https://en.wikipedia.org/wiki/CPU_cache). The main purpose of prefetching is to hide the latency of a memory access. In the next step we check that we got page fault not in the kernel space with the following condition:
 
 ```C
 if (unlikely(fault_in_kernel_space(address))) {
@@ -160,7 +160,7 @@ if (unlikely(fault_in_kernel_space(address))) {
 }
 ```
 
-where `fault_in_kernel_space` is:
+其中`fault_in_kernel_space` 是：where `fault_in_kernel_space` is:
 
 ```C
 static int fault_in_kernel_space(unsigned long address)
@@ -169,13 +169,13 @@ static int fault_in_kernel_space(unsigned long address)
 }
 ```
 
-The `TASK_SIZE_MAX` macro expands to the:
+`TASK_SIZE_MAX` 宏扩展为：The `TASK_SIZE_MAX` macro expands to the:
 
 ```C
 #define TASK_SIZE_MAX   ((1UL << 47) - PAGE_SIZE)
 ```
 
-or `0x00007ffffffff000`. Pay attention on `unlikely` macro. There are two macros in the Linux kernel:
+ 或者`0x00007ffffffff000`。注意 `unlikely` 宏。在 Linux 内核中有两个宏：or `0x00007ffffffff000`. Pay attention on `unlikely` macro. There are two macros in the Linux kernel:
 
 ```C
 #define likely(x)      __builtin_expect(!!(x), 1)
